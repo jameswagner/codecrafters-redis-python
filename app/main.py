@@ -22,6 +22,7 @@ async def handle_client(reader, writer):
         await writer.drain()
     else:
         print("Received unexpected data")
+    print("Stopping the server")
 
 async def main():
     global ping_count  # Declare ping_count as global
