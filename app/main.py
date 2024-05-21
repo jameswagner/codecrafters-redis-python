@@ -23,10 +23,6 @@ async def handle_client(reader, writer):
     else:
         print("Received unexpected data")
 
-    # Close the connection
-    writer.close()
-    await writer.wait_closed()
-
 async def main():
     global ping_count  # Declare ping_count as global
     ping_count = 0  # Initialize ping_count
@@ -35,7 +31,9 @@ async def main():
     print("Server is listening on port 6379...")
 
     async with server:
-        await server.serve_forever()
+        await server.serve_forever(0.001)
+        
+    print("Server stopped listening")
 
 if __name__ == "__main__":
     asyncio.run(main())
