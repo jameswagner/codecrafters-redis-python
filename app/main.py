@@ -31,7 +31,7 @@ async def main():
     print("Server is listening on port 6379...")
 
     async with server:
-        await server.serve_forever(0.001)
+        await server.serve_forever()
         
     print("Server stopped listening")
 
