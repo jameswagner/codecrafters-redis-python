@@ -13,16 +13,8 @@ class AsyncServer:
         addr = server.sockets[0].getsockname()
         logging.info(f"Server started at http://{addr[0]}:{addr[1]}")
 
-        # Create a background task for periodic logging
-        #asyncio.create_task(self.periodic_log())
-
         async with server:
             await server.serve_forever()
-
-    async def periodic_log(self):
-        while True:
-            logging.info("Server is running...")
-            await asyncio.sleep(0.1)  # Log every 100 milliseconds
 
     async def accept_connections(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
