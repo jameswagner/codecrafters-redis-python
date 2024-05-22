@@ -14,7 +14,7 @@ class AsyncServer:
         logging.info(f"Server started at http://{addr[0]}:{addr[1]}")
 
         # Create a background task for periodic logging
-        asyncio.create_task(self.periodic_log())
+        #asyncio.create_task(self.periodic_log())
 
         async with server:
             await server.serve_forever()
