@@ -30,9 +30,12 @@ class AsyncRequestHandler:
         self.writer = writer
 
     async def process_request(self) -> None:
-        request = await self.reader.read(1024)
-        logging.info(f"Request: {request}")
-        await self.handle_request(request)
+        while True:
+            request = await self.reader.read(1024)
+            if not request:
+                break
+            logging.info(f"Request: {request}")
+            await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
         redis_ping = b"*1\r\n$4\r\nPING\r\n"
