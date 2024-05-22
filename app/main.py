@@ -48,6 +48,7 @@ class AsyncRequestHandler:
             self.writer.write(redis_pong)
             await self.writer.drain()
         else:
+            logging.info(f"Received PING {ping_count}")
             logging.info("Received unexpected data")
         
         self.writer.close()
