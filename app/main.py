@@ -5,6 +5,7 @@ class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379):
         self.host = host
         self.port = port
+        self.memory = {}
 
     async def start(self) -> None:
         server = await asyncio.start_server(
@@ -25,9 +26,10 @@ class AsyncServer:
         await request_handler.process_request()
 
 class AsyncRequestHandler:
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, memory):
         self.reader = reader
         self.writer = writer
+        self.memory = memory
 
     async def process_request(self) -> None:
         while True:
@@ -52,15 +54,9 @@ class AsyncRequestHandler:
         elif cmd_name == "ECHO" and len(command) > 1:
             response = f"+{command[1]}\r\n"
         elif cmd_name == "SET" and len(command) > 2:
-            global set_count
-            set_count += 1
-            global memory
             memory[command[1]] = command[2]
             response = "+OK\r\n"
         elif cmd_name == "GET" and len(command) > 1:
-            global get_count
-            get_count += 1
-            global memory
             value = memory.get(command[1], None)
             if value:
                 response = f"${len(value)}\r\n{value}\r\n"
@@ -98,12 +94,6 @@ class AsyncRequestHandler:
 async def main() -> None:
     global ping_count
     ping_count = 0
-    global memory
-    memory = {}
-    global get_count
-    get_count = 0
-    global set_count
-    set_count = 0
     
     logging.basicConfig(level=logging.INFO)
     server = AsyncServer()
