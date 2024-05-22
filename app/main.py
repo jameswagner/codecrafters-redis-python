@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 class AsyncServer:
-    def __init__(self, host: str = "localhost", port: int = 6379):
+    def __init__(self, host: str = "127.0.0.1", port: int = 6379):
         self.host = host
         self.port = port
 
@@ -13,8 +13,16 @@ class AsyncServer:
         addr = server.sockets[0].getsockname()
         logging.info(f"Server started at http://{addr[0]}:{addr[1]}")
 
+        # Create a background task for periodic logging
+        asyncio.create_task(self.periodic_log())
+
         async with server:
             await server.serve_forever()
+
+    async def periodic_log(self):
+        while True:
+            logging.info("Server is running...")
+            await asyncio.sleep(0.1)  # Log every 100 milliseconds
 
     async def accept_connections(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -48,11 +56,7 @@ class AsyncRequestHandler:
             self.writer.write(redis_pong)
             await self.writer.drain()
         else:
-            logging.info(f"Received PING {ping_count}")
             logging.info("Received unexpected data")
-        
-        self.writer.close()
-        await self.writer.wait_closed()
 
 async def main() -> None:
     global ping_count
