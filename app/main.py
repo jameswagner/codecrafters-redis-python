@@ -1,40 +1,61 @@
 import asyncio
+import logging
 
-async def handle_client(reader, writer):
-    global ping_count  # Declare ping_count as global
+class AsyncServer:
+    def __init__(self, host: str = "localhost", port: int = 6379):
+        self.host = host
+        self.port = port
 
-    # Read data from the client
-    data = await reader.read(1024)
-    print(f"Received data: {data}")
+    async def start(self) -> None:
+        server = await asyncio.start_server(
+            self.accept_connections, self.host, self.port
+        )
+        addr = server.sockets[0].getsockname()
+        logging.info(f"Server started at http://{addr[0]}:{addr[1]}")
 
-    # Redis "PING" command encoding
-    redis_ping = b"*1\r\n$4\r\nPING\r\n"
-    # Redis "PONG" response encoding
-    redis_pong = b"+PONG\r\n"
+        async with server:
+            await server.serve_forever()
 
-    # Check if the data matches "PING" command
-    if data == redis_ping:
-        ping_count += 1  # Increment ping_count
-        print(f"Received PING {ping_count}")  # Log the count
-        print("Sending PONG")
-        # Respond with "PONG"
-        writer.write(redis_pong)
-        await writer.drain()
-    else:
-        print("Received unexpected data")
-    print("Stopping the server")
+    async def accept_connections(
+        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
+        addr = writer.get_extra_info("peername")
+        logging.info(f"Connected by {addr}")
+        request_handler = AsyncRequestHandler(reader, writer)
+        await request_handler.process_request()
 
-async def main():
-    global ping_count  # Declare ping_count as global
-    ping_count = 0  # Initialize ping_count
+class AsyncRequestHandler:
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        self.reader = reader
+        self.writer = writer
 
-    server = await asyncio.start_server(handle_client, "localhost", 6379)
-    print("Server is listening on port 6379...")
+    async def process_request(self) -> None:
+        request = await self.reader.read(1024)
+        logging.info(f"Request: {request}")
+        await self.handle_request(request)
 
-    async with server:
-        await server.serve_forever()
+    async def handle_request(self, request: bytes) -> None:
+        redis_ping = b"*1\r\n$4\r\nPING\r\n"
+        redis_pong = b"+PONG\r\n"
+
+        if request == redis_ping:
+            global ping_count
+            ping_count += 1
+            logging.info(f"Received PING {ping_count}")
+            self.writer.write(redis_pong)
+            await self.writer.drain()
+        else:
+            logging.info("Received unexpected data")
         
-    print("Server stopped listening")
+        self.writer.close()
+        await self.writer.wait_closed()
+
+async def main() -> None:
+    global ping_count
+    ping_count = 0
+    logging.basicConfig(level=logging.INFO)
+    server = AsyncServer()
+    await server.start()
 
 if __name__ == "__main__":
     asyncio.run(main())
