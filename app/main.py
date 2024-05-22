@@ -22,7 +22,7 @@ class AsyncServer:
     ) -> None:
         addr = writer.get_extra_info("peername")
         logging.info(f"Connected by {addr}")
-        request_handler = AsyncRequestHandler(reader, writer)
+        request_handler = AsyncRequestHandler(reader, writer, memory)
         await request_handler.process_request()
 
 class AsyncRequestHandler:
