@@ -38,17 +38,47 @@ class AsyncRequestHandler:
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
-        redis_ping = b"*1\r\n$4\r\nPING\r\n"
-        redis_pong = b"+PONG\r\n"
+        command = self.parse_redis_protocol(request)
+        if not command:
+            logging.info("Received invalid data")
+            return
 
-        if request == redis_ping:
+        cmd_name = command[0].upper()  # Command names are case-insensitive
+        if cmd_name == "PING":
             global ping_count
             ping_count += 1
             logging.info(f"Received PING {ping_count}")
-            self.writer.write(redis_pong)
-            await self.writer.drain()
+            response = "+PONG\r\n"
+        elif cmd_name == "ECHO" and len(command) > 1:
+            response = f"+{command[1]}\r\n"
         else:
-            logging.info("Received unexpected data")
+            response = "-ERR unknown command\r\n"
+
+        self.writer.write(response.encode())
+        await self.writer.drain()
+
+    def parse_redis_protocol(self, data: bytes):
+        try:
+            parts = data.split(b'\r\n')
+            if not parts or parts[0][0] != ord(b'*'):
+                return None
+            
+            num_elements = int(parts[0][1:])
+            elements = []
+            index = 1
+            
+            for _ in range(num_elements):
+                if parts[index][0] != ord(b'$'):
+                    return None
+                
+                length = int(parts[index][1:])
+                index += 1
+                elements.append(parts[index].decode('utf-8'))
+                index += 1
+
+            return elements
+        except (IndexError, ValueError):
+            return None
 
 async def main() -> None:
     global ping_count
