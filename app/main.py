@@ -22,7 +22,7 @@ class AsyncServer:
     ) -> None:
         addr = writer.get_extra_info("peername")
         logging.info(f"Connected by {addr}")
-        request_handler = AsyncRequestHandler(reader, writer, memory)
+        request_handler = AsyncRequestHandler(reader, writer, self.memory)
         await request_handler.process_request()
 
 class AsyncRequestHandler:
@@ -54,10 +54,10 @@ class AsyncRequestHandler:
         elif cmd_name == "ECHO" and len(command) > 1:
             response = f"+{command[1]}\r\n"
         elif cmd_name == "SET" and len(command) > 2:
-            memory[command[1]] = command[2]
+            self.memory[command[1]] = command[2]
             response = "+OK\r\n"
         elif cmd_name == "GET" and len(command) > 1:
-            value = memory.get(command[1], None)
+            value = self.memory.get(command[1], None)
             if value:
                 response = f"${len(value)}\r\n{value}\r\n"
             else:
