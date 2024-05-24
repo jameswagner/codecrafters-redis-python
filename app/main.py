@@ -52,7 +52,7 @@ class AsyncRequestHandler:
 
         cmd_name = command[0].upper()  # Command names are case-insensitive
         if cmd_name == "PING":
-            response = await self.handle_ping(command)
+            response = await self.handle_ping()
         elif cmd_name == "ECHO" and len(command) > 1:
             response = await self.handle_echo(command)
         elif cmd_name == "SET" and len(command) > 2:
@@ -62,7 +62,7 @@ class AsyncRequestHandler:
         elif cmd_name == "INFO" and len(command) > 1:
             response = await self.handle_info(command)
         else:
-            response = await self.handle_unknown(command)
+            response = await self.handle_unknown()
 
         self.writer.write(response.encode())
         await self.writer.drain()
