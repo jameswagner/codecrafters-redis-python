@@ -187,7 +187,7 @@ async def main() -> None:
         # Use replica_server and replica_port as needed
 
     logging.basicConfig(level=logging.INFO)
-    server = await AsyncServer.create(port=args.port, replica_server=args.replica_server, replica_port=args.replica_port)
+    server = await AsyncServer.create(port=args.port, replica_server=replica_server, replica_port=replica_port)
     await server.start()
 
 if __name__ == "__main__":
