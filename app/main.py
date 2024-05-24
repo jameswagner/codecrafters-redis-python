@@ -51,36 +51,53 @@ class AsyncRequestHandler:
 
         cmd_name = command[0].upper()  # Command names are case-insensitive
         if cmd_name == "PING":
-            global ping_count
-            ping_count += 1
-            logging.info(f"Received PING {ping_count}")
-            response = "+PONG\r\n"
+            response = await self.handle_ping(command)
         elif cmd_name == "ECHO" and len(command) > 1:
-            response = f"+{command[1]}\r\n"
+            response = await self.handle_echo(command)
         elif cmd_name == "SET" and len(command) > 2:
-            self.memory[command[1]] = command[2]
-            if(len(command) > 4 and command[3].upper() == "PX" and command[4].isnumeric()):
-                expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
-                self.expiration[command[1]] = time.time() + expiration_duration
-            else:
-                self.expiration[command[1]] = None  
-            response = "+OK\r\n"
+            response = await self.handle_set(command)
         elif cmd_name == "GET" and len(command) > 1:
-            if self.expiration.get(command[1], None) and self.expiration[command[1]] < time.time():
-                self.memory.pop(command[1], None)
-                self.expiration.pop(command[1], None)
-                response = "$-1\r\n"
-            else:
-                value = self.memory.get(command[1], None)
-                if value:
-                    response = f"${len(value)}\r\n{value}\r\n"
-                else:
-                    response = "$-1\r\n"
+            response = await self.handle_get(command)
+        elif cmd_name == "INFO" and len(command) > 1:
+            response = await self.handle_info(command)
         else:
-            response = "-ERR unknown command\r\n"
+            response = await self.handle_unknown(command)
 
         self.writer.write(response.encode())
         await self.writer.drain()
+
+    async def handle_info(self, command: List[str]) -> str:
+        if command[1].lower() == "replication":
+            return "+role:master\r\n"
+        else:
+            return "-ERR unknown INFO section\r\n"
+
+    async def handle_echo(self, command: List[str]) -> str:
+        return f"+{command[1]}\r\n"
+
+    async def handle_set(self, command: List[str]) -> str:
+        self.memory[command[1]] = command[2]
+        if(len(command) > 4 and command[3].upper() == "PX" and command[4].isnumeric()):
+            expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
+            self.expiration[command[1]] = time.time() + expiration_duration
+        else:
+            self.expiration[command[1]] = None  
+        return "+OK\r\n"
+
+    async def handle_get(self, command: List[str]) -> str:
+        if self.expiration.get(command[1], None) and self.expiration[command[1]] < time.time():
+            self.memory.pop(command[1], None)
+            self.expiration.pop(command[1], None)
+            return "$-1\r\n"
+        else:
+            value = self.memory.get(command[1], None)
+            if value:
+                return f"${len(value)}\r\n{value}\r\n"
+            else:
+                return "$-1\r\n"
+
+    async def handle_unknown(self, command: List[str]) -> str:
+        return "-ERR unknown command\r\n"
 
     def parse_redis_protocol(self, data: bytes):
         try:
