@@ -3,6 +3,8 @@ import asyncio
 import logging
 import time
 from typing import List
+import random
+import string
 
 class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
@@ -81,7 +83,9 @@ class AsyncRequestHandler:
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
             if self.replica_server is None:
-                return "+role:master\r\n"
+                master_replid = generate_random_string(40)
+                master_repl_offset = "0"
+                return f"+role:master\r\n$40\r\nmaster_replid:{master_replid}\r\n$1\r\nmaster_repl_offset:{master_repl_offset}\r\n"
             else:
                 return "+role:slave\r\n"
         else:
@@ -113,6 +117,7 @@ class AsyncRequestHandler:
 
     async def handle_unknown(self) -> str:
         return "-ERR unknown command\r\n"
+
 
     def parse_redis_protocol(self, data: bytes):
         try:
@@ -162,3 +167,6 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+def generate_random_string(length: int) -> str:
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
