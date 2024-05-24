@@ -67,6 +67,12 @@ class AsyncRequestHandler:
         self.writer.write(response.encode())
         await self.writer.drain()
 
+    async def handle_ping(self) -> str:
+        global ping_count
+        ping_count += 1
+        logging.info(f"Received PING {ping_count}")
+        return "+PONG\r\n"
+
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
             return "+role:master\r\n"
