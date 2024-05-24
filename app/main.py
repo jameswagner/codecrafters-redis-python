@@ -85,15 +85,8 @@ class AsyncRequestHandler:
             if self.replica_server is None:
                 master_replid = self.generate_random_string(40)
                 master_repl_offset = "0"
-                response = (
-                    "%3\r\n"  # Map with three elements
-                    "+role\r\n"
-                    "+master\r\n"
-                    "+master_replid\r\n"
-                    f"${len(master_replid)}\r\n{master_replid}\r\n"
-                    "+master_repl_offset\r\n"
-                    f"${len(master_repl_offset)}\r\n{master_repl_offset}\r\n"
-                )
+                payload = f"role:master\nmaster_replid:{master_replid}\nmaster_repl_offset:{master_repl_offset}"
+                response = self.as_bulk_string(payload)
                 return response
             else:
                 return "+role:slave\r\n"
@@ -127,6 +120,8 @@ class AsyncRequestHandler:
     async def handle_unknown(self) -> str:
         return "-ERR unknown command\r\n"
 
+    def as_bulk_string(self, payload: str) -> bytes:
+        return f"${len(payload)}\r\n{payload}\r\n".encode()
 
     def parse_redis_protocol(self, data: bytes):
         try:
