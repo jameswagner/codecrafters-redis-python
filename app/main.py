@@ -1,11 +1,13 @@
 import asyncio
 import logging
+import time
 
 class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379):
         self.host = host
         self.port = port
         self.memory = {}
+        self.expiration = {}
 
     async def start(self) -> None:
         server = await asyncio.start_server(
@@ -22,14 +24,15 @@ class AsyncServer:
     ) -> None:
         addr = writer.get_extra_info("peername")
         logging.info(f"Connected by {addr}")
-        request_handler = AsyncRequestHandler(reader, writer, self.memory)
+        request_handler = AsyncRequestHandler(reader, writer, self.memory, self.expiration)
         await request_handler.process_request()
 
 class AsyncRequestHandler:
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, memory):
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, memory: dict, expiration: dict):
         self.reader = reader
         self.writer = writer
         self.memory = memory
+        self.expiration = expiration
 
     async def process_request(self) -> None:
         while True:
@@ -55,13 +58,26 @@ class AsyncRequestHandler:
             response = f"+{command[1]}\r\n"
         elif cmd_name == "SET" and len(command) > 2:
             self.memory[command[1]] = command[2]
+            logging.info(f"received SET: {command}")
+            if(len(command) > 4 and command[3].upper() == "PX" and command[4].isnumeric()):
+                expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
+                self.expiration[command[1]] = time.time() + expiration_duration
+            else:
+                self.expiration[command[1]] = None  
             response = "+OK\r\n"
         elif cmd_name == "GET" and len(command) > 1:
-            value = self.memory.get(command[1], None)
-            if value:
-                response = f"${len(value)}\r\n{value}\r\n"
-            else:
+            if self.expiration.get(command[1], None) and self.expiration[command[1]] < time.time():
+                self.memory.pop(command[1], None)
+                self.expiration.pop(command[1], None)
                 response = "$-1\r\n"
+                logging.info(f"Key {command[1]} has expired")
+            else:
+                logging.info(f"Key {command[1]} has not yet expired, will expire at {self.expiration.get(command[1], None)}")
+                value = self.memory.get(command[1], None)
+                if value:
+                    response = f"${len(value)}\r\n{value}\r\n"
+                else:
+                    response = "$-1\r\n"
         else:
             response = "-ERR unknown command\r\n"
 
