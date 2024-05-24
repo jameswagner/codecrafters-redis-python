@@ -86,9 +86,13 @@ class AsyncRequestHandler:
                 master_replid = self.generate_random_string(40)
                 master_repl_offset = "0"
                 response = (
-                    "+role:master\r\n"
-                    f"${len('master_replid:' + master_replid)}\r\nmaster_replid:{master_replid}\r\n"
-                    f"${len('master_repl_offset:' + master_repl_offset)}\r\nmaster_repl_offset:{master_repl_offset}\r\n"
+                    "%3\r\n"  # Map with three elements
+                    "+role\r\n"
+                    "+master\r\n"
+                    "+master_replid\r\n"
+                    f"${len(master_replid)}\r\n{master_replid}\r\n"
+                    "+master_repl_offset\r\n"
+                    f"${len(master_repl_offset)}\r\n{master_repl_offset}\r\n"
                 )
                 return response
             else:
