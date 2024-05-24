@@ -120,8 +120,8 @@ class AsyncRequestHandler:
     async def handle_unknown(self) -> str:
         return "-ERR unknown command\r\n"
 
-    def as_bulk_string(self, payload: str) -> bytes:
-        return f"${len(payload)}\r\n{payload}\r\n".encode()
+    def as_bulk_string(self, payload: str) -> str:
+        return f"${len(payload)}\r\n{payload}\r\n"
 
     def parse_redis_protocol(self, data: bytes):
         try:
