@@ -85,7 +85,12 @@ class AsyncRequestHandler:
             if self.replica_server is None:
                 master_replid = self.generate_random_string(40)
                 master_repl_offset = "0"
-                return f"+role:master\r\n$40\r\nmaster_replid:{master_replid}\r\n$1\r\nmaster_repl_offset:{master_repl_offset}\r\n"
+                response = (
+                    "+role:master\r\n"
+                    f"${len('master_replid:' + master_replid)}\r\nmaster_replid:{master_replid}\r\n"
+                    f"${len('master_repl_offset:' + master_repl_offset)}\r\nmaster_repl_offset:{master_repl_offset}\r\n"
+                )
+                return response
             else:
                 return "+role:slave\r\n"
         else:
