@@ -15,6 +15,24 @@ class AsyncServer:
         self.memory = {}
         self.expiration = {}
 
+    @classmethod
+    async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
+        instance = cls(host, port, replica_server, replica_port)
+        if replica_server is not None and replica_port is not None:
+            response = await instance.send_ping(replica_server, replica_port)
+            if response != "+PONG\r\n":
+                raise ValueError("Failed to receive PONG from replica server")
+        return instance
+
+    async def send_ping(self, server: str, port: int) -> str:
+        reader, writer = await asyncio.open_connection(server, port)
+        writer.write(b"*1\r\n$4\r\nPING\r\n")
+        await writer.drain()
+        response = await reader.read(1024)
+        writer.close()
+        await writer.wait_closed()
+        return response.decode()
+
     async def start(self) -> None:
         server = await asyncio.start_server(
             self.accept_connections, self.host, self.port
@@ -169,7 +187,7 @@ async def main() -> None:
         # Use replica_server and replica_port as needed
 
     logging.basicConfig(level=logging.INFO)
-    server = AsyncServer(port=args.port, replica_server=replica_server, replica_port=replica_port)
+    server = await AsyncServer.create(port=args.port, replica_server=args.replica_server, replica_port=args.replica_port)
     await server.start()
 
 if __name__ == "__main__":
