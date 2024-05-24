@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import logging
 import time
@@ -58,7 +59,6 @@ class AsyncRequestHandler:
             response = f"+{command[1]}\r\n"
         elif cmd_name == "SET" and len(command) > 2:
             self.memory[command[1]] = command[2]
-            logging.info(f"received SET: {command}")
             if(len(command) > 4 and command[3].upper() == "PX" and command[4].isnumeric()):
                 expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
                 self.expiration[command[1]] = time.time() + expiration_duration
@@ -70,9 +70,7 @@ class AsyncRequestHandler:
                 self.memory.pop(command[1], None)
                 self.expiration.pop(command[1], None)
                 response = "$-1\r\n"
-                logging.info(f"Key {command[1]} has expired")
             else:
-                logging.info(f"Key {command[1]} has not yet expired, will expire at {self.expiration.get(command[1], None)}")
                 value = self.memory.get(command[1], None)
                 if value:
                     response = f"${len(value)}\r\n{value}\r\n"
@@ -112,7 +110,12 @@ async def main() -> None:
     ping_count = 0
     
     logging.basicConfig(level=logging.INFO)
-    server = AsyncServer()
+    parser = argparse.ArgumentParser(description="Run the Async Redis-like server.")
+    parser.add_argument('--port', type=int, default=6379, help='Port to run the server on')
+    args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO)
+    server = AsyncServer(port=args.port)
     await server.start()
 
 if __name__ == "__main__":
