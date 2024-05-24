@@ -83,7 +83,7 @@ class AsyncRequestHandler:
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
             if self.replica_server is None:
-                master_replid = generate_random_string(40)
+                master_replid = self.generate_random_string(40)
                 master_repl_offset = "0"
                 return f"+role:master\r\n$40\r\nmaster_replid:{master_replid}\r\n$1\r\nmaster_repl_offset:{master_repl_offset}\r\n"
             else:
@@ -141,6 +141,9 @@ class AsyncRequestHandler:
             return elements
         except (IndexError, ValueError):
             return None
+        
+    def generate_random_string(self, length: int) -> str:
+        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 async def main() -> None:
     global ping_count
@@ -168,5 +171,3 @@ async def main() -> None:
 if __name__ == "__main__":
     asyncio.run(main())
 
-def generate_random_string(length: int) -> str:
-        return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
