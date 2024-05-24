@@ -5,9 +5,11 @@ import time
 from typing import List
 
 class AsyncServer:
-    def __init__(self, host: str = "127.0.0.1", port: int = 6379):
+    def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
         self.host = host
         self.port = port
+        self.replica_server = replica_server
+        self.replica_port = replica_port
         self.memory = {}
         self.expiration = {}
 
@@ -26,15 +28,18 @@ class AsyncServer:
     ) -> None:
         addr = writer.get_extra_info("peername")
         logging.info(f"Connected by {addr}")
-        request_handler = AsyncRequestHandler(reader, writer, self.memory, self.expiration)
+        request_handler = AsyncRequestHandler(reader, writer, self)
         await request_handler.process_request()
 
 class AsyncRequestHandler:
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, memory: dict, expiration: dict):
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, server: AsyncServer):
         self.reader = reader
         self.writer = writer
-        self.memory = memory
-        self.expiration = expiration
+        self.server = server
+        self.memory = server.memory
+        self.expiration = server.expiration
+        self.replica_server = server.replica_server
+        self.replica_port = server.replica_port
 
     async def process_request(self) -> None:
         while True:
@@ -75,7 +80,10 @@ class AsyncRequestHandler:
 
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
-            return "+role:master\r\n"
+            if self.replica_server is None:
+                return "+role:master\r\n"
+            else:
+                return "+role:slave\r\n"
         else:
             return "-ERR unknown INFO section\r\n"
 
@@ -136,10 +144,20 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Run the Async Redis-like server.")
     parser.add_argument('--port', type=int, default=6379, help='Port to run the server on')
+    parser.add_argument('--replicaof', type=str, default=None, help='Replicate data from a master server')
     args = parser.parse_args()
+    replica_server, replica_port = None, None
+
+    if args.replicaof:
+        replica_info = args.replicaof.split()
+        if len(replica_info) != 2:
+            raise ValueError("Invalid replicaof argument. Must be in the format 'server port'")
+        replica_server = replica_info[0]
+        replica_port = int(replica_info[1])
+        # Use replica_server and replica_port as needed
 
     logging.basicConfig(level=logging.INFO)
-    server = AsyncServer(port=args.port)
+    server = AsyncServer(port=args.port, replica_server=replica_server, replica_port=replica_port)
     await server.start()
 
 if __name__ == "__main__":
