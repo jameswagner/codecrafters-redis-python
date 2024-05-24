@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import logging
 import time
+from typing import List
 
 class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379):
@@ -96,7 +97,7 @@ class AsyncRequestHandler:
             else:
                 return "$-1\r\n"
 
-    async def handle_unknown(self, command: List[str]) -> str:
+    async def handle_unknown(self) -> str:
         return "-ERR unknown command\r\n"
 
     def parse_redis_protocol(self, data: bytes):
