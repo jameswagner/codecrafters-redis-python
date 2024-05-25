@@ -24,7 +24,7 @@ class AsyncServer:
             if response != "+PONG\r\n":
                 raise ValueError("Failed to receive PONG from replica server")
 
-            await instance.send_replconf_command(reader, writer)
+            await instance.send_replconf_command(reader, writer, port)
             await instance.send_additional_replconf_command(reader, writer)
             writer.close()
             await writer.wait_closed()
