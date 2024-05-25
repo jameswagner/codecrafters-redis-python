@@ -19,40 +19,38 @@ class AsyncServer:
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
         instance = cls(host, port, replica_server, replica_port)
         if replica_server is not None and replica_port is not None:
-            response = await instance.send_ping(replica_server, replica_port)
+            reader, writer = await asyncio.open_connection(replica_server, replica_port)
+            response = await instance.send_ping(reader, writer)
             if response != "+PONG\r\n":
                 raise ValueError("Failed to receive PONG from replica server")
 
-            await instance.send_replconf_command(port)
-            await instance.send_additional_replconf_command()
+            await instance.send_replconf_command(reader, writer)
+            await instance.send_additional_replconf_command(reader, writer)
+            writer.close()
+            await writer.wait_closed()
 
         return instance
 
-    async def send_replconf_command(self, port: int) -> None:
+    async def send_replconf_command(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, port: int) -> None:
         replconf_command = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + str(port) + "\r\n"
-        self.writer.write(replconf_command.encode())
-        await self.writer.drain()
-
-        replconf_response = await self.reader.read(1024)
+        writer.write(replconf_command.encode())
+        await writer.drain()
+        replconf_response = await reader.read(1024)
         if replconf_response.decode() != "+OK\r\n":
             raise ValueError("Failed to receive +OK response from REPLCONF command")
 
-    async def send_additional_replconf_command(self) -> None:
+    async def send_additional_replconf_command(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         replconf_command_additional = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
-        self.writer.write(replconf_command_additional.encode())
-        await self.writer.drain()
-
-        replconf_response_additional = await self.reader.read(1024)
+        writer.write(replconf_command_additional.encode())
+        await writer.drain()
+        replconf_response_additional = await reader.read(1024)
         if replconf_response_additional.decode() != "+OK\r\n":
             raise ValueError("Failed to receive +OK response from additional REPLCONF command")
 
-    async def send_ping(self, server: str, port: int) -> str:
-        reader, writer = await asyncio.open_connection(server, port)
+    async def send_ping(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> str:
         writer.write(b"*1\r\n$4\r\nPING\r\n")
         await writer.drain()
         response = await reader.read(1024)
-        writer.close()
-        await writer.wait_closed()
         return response.decode()
 
     async def start(self) -> None:
