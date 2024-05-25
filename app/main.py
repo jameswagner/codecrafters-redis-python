@@ -22,7 +22,29 @@ class AsyncServer:
             response = await instance.send_ping(replica_server, replica_port)
             if response != "+PONG\r\n":
                 raise ValueError("Failed to receive PONG from replica server")
+
+            await instance.send_replconf_command(port)
+            await instance.send_additional_replconf_command()
+
         return instance
+
+    async def send_replconf_command(self, port: int) -> None:
+        replconf_command = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + str(port) + "\r\n"
+        self.writer.write(replconf_command.encode())
+        await self.writer.drain()
+
+        replconf_response = await self.reader.read(1024)
+        if replconf_response.decode() != "+OK\r\n":
+            raise ValueError("Failed to receive +OK response from REPLCONF command")
+
+    async def send_additional_replconf_command(self) -> None:
+        replconf_command_additional = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
+        self.writer.write(replconf_command_additional.encode())
+        await self.writer.drain()
+
+        replconf_response_additional = await self.reader.read(1024)
+        if replconf_response_additional.decode() != "+OK\r\n":
+            raise ValueError("Failed to receive +OK response from additional REPLCONF command")
 
     async def send_ping(self, server: str, port: int) -> str:
         reader, writer = await asyncio.open_connection(server, port)
@@ -86,17 +108,16 @@ class AsyncRequestHandler:
             response = await self.handle_get(command)
         elif cmd_name == "INFO" and len(command) > 1:
             response = await self.handle_info(command)
+        elif cmd_name == "REPLCONF":
+            response = await self.handle_replconf(command)
         else:
             response = await self.handle_unknown()
 
         self.writer.write(response.encode())
         await self.writer.drain()
 
-    async def handle_ping(self) -> str:
-        global ping_count
-        ping_count += 1
-        logging.info(f"Received PING {ping_count}")
-        return "+PONG\r\n"
+    async def handle_replconf(self, command: List[str]) -> str:
+        return "+OK\r\n"
 
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
