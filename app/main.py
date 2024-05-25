@@ -117,8 +117,8 @@ class AsyncRequestHandler:
             response = await self.handle_info(command)
         elif cmd_name == "REPLCONF":
             response = await self.handle_replconf(command)
-        elif cmd_name == "FULLRESYNC":
-            response = await self.handle_fullresync(command)
+        elif cmd_name == "PYSNC":
+            response = await self.handle_psync(command)
         else:
             response = await self.handle_unknown()
 
@@ -131,7 +131,7 @@ class AsyncRequestHandler:
     async def handle_replconf(self, command: List[str]) -> str:
         return "+OK\r\n"
 
-    async def handle_fullresync(self, command: List[str]) -> str:
+    async def handle_psync(self, command: List[str]) -> str:
         return "+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"
 
     async def handle_info(self, command: List[str]) -> str:
