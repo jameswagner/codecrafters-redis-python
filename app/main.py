@@ -32,7 +32,7 @@ class AsyncServer:
         return instance
 
     async def send_replconf_command(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, port: int) -> None:
-        replconf_command = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + str(port) + "\r\n"
+        replconf_command = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n" + str(port) + "\r\n"
         writer.write(replconf_command.encode())
         await writer.drain()
         replconf_response = await reader.read(1024)
