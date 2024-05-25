@@ -114,6 +114,9 @@ class AsyncRequestHandler:
         self.writer.write(response.encode())
         await self.writer.drain()
 
+    async def handle_ping(self) -> str:
+        return "+PONG\r\n"
+
     async def handle_replconf(self, command: List[str]) -> str:
         return "+OK\r\n"
 
