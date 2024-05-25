@@ -53,7 +53,7 @@ class AsyncServer:
         writer.write(psync_command.encode())
         await writer.drain()
         psync_response = await reader.read(1024)
-        if not psync_response.decode().startswith("+FULLRESYNC"):
+        if not psync_response.startswith("+FULLRESYNC"):
             raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
 
     async def send_ping(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> str:
