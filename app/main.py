@@ -132,7 +132,7 @@ class AsyncRequestHandler:
         return "+OK\r\n"
 
     async def handle_fullresync(self, command: List[str]) -> str:
-        return "+FULLRESYNC 0 0\r\n"
+        return "+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"
 
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
