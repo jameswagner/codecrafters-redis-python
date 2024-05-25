@@ -26,6 +26,7 @@ class AsyncServer:
 
             await instance.send_replconf_command(reader, writer, port)
             await instance.send_additional_replconf_command(reader, writer)
+            await instance.send_psync_command(reader, writer)
             writer.close()
             await writer.wait_closed()
 
@@ -46,6 +47,14 @@ class AsyncServer:
         replconf_response_additional = await reader.read(1024)
         if replconf_response_additional.decode() != "+OK\r\n":
             raise ValueError("Failed to receive +OK response from additional REPLCONF command")
+
+    async def send_psync_command(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        psync_command = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
+        writer.write(psync_command.encode())
+        await writer.drain()
+        psync_response = await reader.read(1024)
+        if not psync_response.decode().startswith("+FULLRESYNC"):
+            raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
 
     async def send_ping(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> str:
         writer.write(b"*1\r\n$4\r\nPING\r\n")
@@ -108,6 +117,8 @@ class AsyncRequestHandler:
             response = await self.handle_info(command)
         elif cmd_name == "REPLCONF":
             response = await self.handle_replconf(command)
+        elif cmd_name == "FULLRESYNC":
+            response = await self.handle_fullresync(command)
         else:
             response = await self.handle_unknown()
 
@@ -119,6 +130,9 @@ class AsyncRequestHandler:
 
     async def handle_replconf(self, command: List[str]) -> str:
         return "+OK\r\n"
+
+    async def handle_fullresync(self, command: List[str]) -> str:
+        return "+FULLRESYNC 0 0\r\n"
 
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
