@@ -137,7 +137,9 @@ class AsyncRequestHandler:
         response = "+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"
         rdb_hex = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
         binary_data = base64.b64decode(rdb_hex)
-        header = f"${len(binary_data)}\r\n".encode("utf-8") 
+        header = f"${len(binary_data)}\r\n".encode("utf-8")
+        print(header)
+        print(f"{response}{header}{binary_data}\r\n")
         return f"{response}{header}{binary_data}\r\n"
 
     async def handle_info(self, command: List[str]) -> str:
