@@ -15,7 +15,7 @@ class AsyncServer:
         self.replica_port = replica_port
         self.memory = {}
         self.expiration = {}
-        self.reader_writers = []
+        self.writers = []
 
     @classmethod
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
@@ -118,7 +118,7 @@ class AsyncRequestHandler:
         elif cmd_name == "INFO" and len(command) > 1:
             response = await self.handle_info(command)
         elif cmd_name == "REPLCONF":
-            response = await self.handle_replconf(command)
+            response = await self.handle_replconf(command, writer)
         elif cmd_name == "PSYNC":
             response = await self.handle_psync(command)
         else:
@@ -130,15 +130,9 @@ class AsyncRequestHandler:
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
 
-    async def handle_replconf(self, command: List[str]) -> str:
+    async def handle_replconf(self, command: List[str], writer: asyncio.StreamWriter) -> str:
         if len(command) > 2 and command[1] == "listening-port":
-            try:
-                print(f"Opening connection to {self.server.host}:{command[2]}")
-                reader, writer = await asyncio.open_connection("localhost", command[2])
-                self.server.reader_writers.append((reader, writer))
-            except Exception as e:
-                print(f"Failed to open connection: {str(e)}")
-                return f"-ERR Failed to open connection: {str(e)}\r\n"
+            self.server.writers.append(writer)
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
@@ -175,7 +169,7 @@ class AsyncRequestHandler:
             self.expiration[command[1]] = time.time() + expiration_duration
         else:
             self.expiration[command[1]] = None  
-        for reader, writer in self.server.reader_writers:
+        for writer in self.server.writers:
             writer.write(self.encode_redis_protocol(command))
             await writer.drain()
         return "+OK\r\n"
