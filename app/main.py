@@ -134,7 +134,7 @@ class AsyncRequestHandler:
     async def handle_psync(self, command: List[str]) -> str:
         response = "+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"
         rdb_hex = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
-        #rdb_content = bytes.fromhex(rdb_hex)
+        rdb_content = bytes.fromhex(rdb_hex)
         length = len(rdb_content)
         header = f"${length}\r\n".encode()
         return f"{response}{header}{rdb_content}\r\n"
