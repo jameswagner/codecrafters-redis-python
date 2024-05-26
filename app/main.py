@@ -120,12 +120,11 @@ class AsyncRequestHandler:
             response = await self.handle_replconf(command)
         elif cmd_name == "PSYNC":
             response = await self.handle_psync(command)
-            print(response)
         else:
             response = await self.handle_unknown()
-
-        self.writer.write(response.encode())
-        await self.writer.drain()
+        if response:
+            self.writer.write(response.encode())
+            await self.writer.drain()
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
@@ -138,7 +137,11 @@ class AsyncRequestHandler:
         rdb_hex = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
         binary_data = base64.b64decode(rdb_hex)
         header = f"${len(binary_data)}\r\n"
-        return f"{response}{header}{binary_data}\r\n"
+        self.writer.write(response.encode())
+        self.writer.write(header.encode())
+        self.writer.write(binary_data)
+        await self.writer.drain()
+        return ""
 
     async def handle_info(self, command: List[str]) -> str:
         if command[1].lower() == "replication":
