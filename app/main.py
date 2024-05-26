@@ -119,6 +119,7 @@ class AsyncRequestHandler:
             response = await self.handle_replconf(command)
         elif cmd_name == "PSYNC":
             response = await self.handle_psync(command)
+            print(response)
         else:
             response = await self.handle_unknown()
 
