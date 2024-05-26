@@ -137,6 +137,7 @@ class AsyncRequestHandler:
                 reader, writer = await asyncio.open_connection(self.server.host, command[2])
                 self.server.reader_writers.append((reader, writer))
             except Exception as e:
+                print(f"Failed to open connection: {str(e)}"
                 return f"-ERR Failed to open connection: {str(e)}\r\n"
         return "+OK\r\n"
 
