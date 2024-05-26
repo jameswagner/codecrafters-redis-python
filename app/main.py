@@ -133,6 +133,7 @@ class AsyncRequestHandler:
     async def handle_replconf(self, command: List[str]) -> str:
         if len(command) > 2 and command[1] == "listening-port":
             try:
+                print(f"Opening connection to {self.server.host}:{command[2]}")
                 reader, writer = await asyncio.open_connection(self.server.host, command[2])
                 self.server.reader_writers.append((reader, writer))
             except Exception as e:
