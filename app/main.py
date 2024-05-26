@@ -15,6 +15,7 @@ class AsyncServer:
         self.replica_port = replica_port
         self.memory = {}
         self.expiration = {}
+        self.reader_writers = []
 
     @classmethod
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
@@ -130,6 +131,12 @@ class AsyncRequestHandler:
         return "+PONG\r\n"
 
     async def handle_replconf(self, command: List[str]) -> str:
+        if len(command) > 2 and command[1] == "listening-port":
+            try:
+                reader, writer = await asyncio.open_connection(self.server.host, command[2])
+                self.server.reader_writers.append((reader, writer))
+            except Exception as e:
+                return f"-ERR Failed to open connection: {str(e)}\r\n"
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
@@ -166,6 +173,9 @@ class AsyncRequestHandler:
             self.expiration[command[1]] = time.time() + expiration_duration
         else:
             self.expiration[command[1]] = None  
+        for reader, writer in self.server.reader_writers:
+            writer.write(self.encode_redis_protocol(command))
+            await writer.drain()
         return "+OK\r\n"
 
     async def handle_get(self, command: List[str]) -> str:
@@ -185,6 +195,15 @@ class AsyncRequestHandler:
 
     def as_bulk_string(self, payload: str) -> str:
         return f"${len(payload)}\r\n{payload}\r\n"
+    
+    def encode_redis_protocol(self, data: List[str]) -> bytes:
+        encoded_data = []
+        encoded_data.append(f"*{len(data)}\r\n")
+        
+        for element in data:
+            encoded_data.append(f"${len(element)}\r\n{element}\r\n")
+        
+        return ''.join(encoded_data).encode()
 
     def parse_redis_protocol(self, data: bytes):
         try:
