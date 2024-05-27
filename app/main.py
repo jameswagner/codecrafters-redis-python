@@ -34,6 +34,7 @@ class AsyncServer:
             await instance.send_additional_replconf_command(reader, writer)
             await instance.send_psync_command(reader, writer)
             await asyncio.create_task(instance.accept_connections(reader, writer))
+            psync_response = await reader.read(1024)
             
             #writer.close()
             #await writer.wait_closed()
