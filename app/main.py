@@ -34,7 +34,7 @@ class AsyncServer:
             await instance.send_additional_replconf_command(reader, writer)
             await instance.send_psync_command(reader, writer)
             await asyncio.create_task(instance.accept_connections(reader, writer))
-            psync_response = await reader.read(1024)
+            #psync_response = await reader.read(1024)
             
             #writer.close()
             #await writer.wait_closed()
@@ -222,6 +222,7 @@ class AsyncRequestHandler:
         return ''.join(encoded_data).encode()
     def parse_redis_protocol(self, data: bytes):
         try:
+            data = data[data.index(b'*')]
             parts = data.split(b'\r\n')
             commands = []
             index = 0
