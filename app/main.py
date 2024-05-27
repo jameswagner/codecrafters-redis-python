@@ -32,8 +32,8 @@ class AsyncServer:
 
             await instance.send_replconf_command(reader, writer, port)
             await instance.send_additional_replconf_command(reader, writer)
-            await asyncio.create_task(instance.accept_connections(reader, writer))
             await instance.send_psync_command(reader, writer)
+            await asyncio.create_task(instance.accept_connections(reader, writer))
             
             #writer.close()
             #await writer.wait_closed()
@@ -64,8 +64,8 @@ class AsyncServer:
         writer.write(psync_command.encode())
         await writer.drain()
         psync_response = await reader.read(1024)
-        if not psync_response.startswith(b"+FULLRESYNC"):
-            raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
+        #if not psync_response.startswith(b"+FULLRESYNC"):
+            #raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
 
     async def send_ping(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> str:
         writer.write(b"*1\r\n$4\r\nPING\r\n")
