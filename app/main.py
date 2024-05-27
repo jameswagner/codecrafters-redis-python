@@ -224,7 +224,7 @@ class AsyncRequestHandler:
                 element = parts[index].decode('utf-8')
                 index += 1
                 elements.append([element])
-                
+            print("ELEMENTS: ", elements)
             return elements
         except (IndexError, ValueError):
             return None
