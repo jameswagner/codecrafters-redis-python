@@ -35,7 +35,9 @@ class AsyncServer:
             #writer.close()
             #await writer.wait_closed()
         async with instance.inner_server as server:
+            print("SERVER STARTED")
             await server.serve_forever()
+            
         return instance
 
     async def send_replconf_command(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, port: int) -> None:
