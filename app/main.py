@@ -16,10 +16,13 @@ class AsyncServer:
         self.memory = {}
         self.expiration = {}
         self.writers = []
+        self.inner_server = None
 
     @classmethod
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
         instance = cls(host, port, replica_server, replica_port)
+        instance.inner_server = await instance.start()
+        
         if replica_server is not None and replica_port is not None:
             reader, writer = await asyncio.open_connection(replica_server, replica_port)
             response = await instance.send_ping(reader, writer)
@@ -31,7 +34,8 @@ class AsyncServer:
             await instance.send_psync_command(reader, writer)
             writer.close()
             await writer.wait_closed()
-
+        async with instance.inner_server as server:
+            await server.serve_forever()
         return instance
 
     async def send_replconf_command(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, port: int) -> None:
@@ -70,9 +74,9 @@ class AsyncServer:
         )
         addr = server.sockets[0].getsockname()
         logging.info(f"Server started at http://{addr[0]}:{addr[1]}")
+        return server
 
-        async with server:
-            await server.serve_forever()
+        
 
     async def accept_connections(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
@@ -248,7 +252,7 @@ async def main() -> None:
 
     logging.basicConfig(level=logging.INFO)
     server = await AsyncServer.create(port=args.port, replica_server=replica_server, replica_port=replica_port)
-    await server.start()
+    #await server.start()
 
 if __name__ == "__main__":
     asyncio.run(main())
