@@ -28,11 +28,12 @@ class AsyncServer:
             response = await instance.send_ping(reader, writer)
             if response != "+PONG\r\n":
                 raise ValueError("Failed to receive PONG from replica server")
-            await asyncio.create_task(instance.accept_connections(reader, writer))
+            
 
             await instance.send_replconf_command(reader, writer, port)
             await instance.send_additional_replconf_command(reader, writer)
             await instance.send_psync_command(reader, writer)
+            await asyncio.create_task(instance.accept_connections(reader, writer))
             #writer.close()
             #await writer.wait_closed()
         async with instance.inner_server as server:
