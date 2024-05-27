@@ -227,6 +227,7 @@ class AsyncRequestHandler:
                     commands.append(elements)
                 else:
                     index += 1
+            print("COMMANDS: ", commands)
             return commands
         except (IndexError, ValueError):
             return None
