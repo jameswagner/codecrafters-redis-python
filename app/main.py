@@ -207,7 +207,7 @@ class AsyncRequestHandler:
             encoded_data.append(f"${len(element)}\r\n{element}\r\n")
         
         return ''.join(encoded_data).encode()
-    def parse_redis_protocol(data: bytes):
+    def parse_redis_protocol(self, data: bytes):
         try:
             parts = data.split(b'\r\n')
             commands = []
