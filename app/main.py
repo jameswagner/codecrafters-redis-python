@@ -207,7 +207,6 @@ class AsyncRequestHandler:
             encoded_data.append(f"${len(element)}\r\n{element}\r\n")
         
         return ''.join(encoded_data).encode()
-
     def parse_redis_protocol(self, data: bytes):
         try:
             parts = data.split(b'\r\n')
@@ -222,14 +221,13 @@ class AsyncRequestHandler:
                 if parts[index][0] != ord(b'$'):
                     return None
                 index += 1
-                elements.append(parts[index].decode('utf-8'))
+                element = parts[index].decode('utf-8')
                 index += 1
-            print("ELEMENTS: ", elements)
-
+                elements.append([element])
+                
             return elements
         except (IndexError, ValueError):
             return None
-        
     
         
     def generate_random_string(self, length: int) -> str:
