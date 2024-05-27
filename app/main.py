@@ -249,6 +249,7 @@ class AsyncRequestHandler:
                             offset += element_length + 2 
                     commands.append(elements)
                     lengths.append(offset)  # Store the offset as the length of the substring used for the command
+                    offset = 0
                 else:
                     index += 1
 
