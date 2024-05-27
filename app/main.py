@@ -63,7 +63,7 @@ class AsyncServer:
         psync_command = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
         writer.write(psync_command.encode())
         await writer.drain()
-        psync_response = await reader.read(1024)
+        #psync_response = await reader.read(1024)
         #if not psync_response.startswith(b"+FULLRESYNC"):
             #raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
 
