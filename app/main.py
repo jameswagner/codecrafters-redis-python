@@ -61,9 +61,9 @@ class AsyncServer:
         psync_command = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
         writer.write(psync_command.encode())
         await writer.drain()
-        psync_response = await reader.read(1024)
-        if not psync_response.startswith(b"+FULLRESYNC"):
-            raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
+        #psync_response = await reader.read(1024)
+        #if not psync_response.startswith(b"+FULLRESYNC"):
+        #    raise ValueError("Failed to receive +FULLRESYNC response from PSYNC command")
 
     async def send_ping(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> str:
         writer.write(b"*1\r\n$4\r\nPING\r\n")
@@ -207,28 +207,30 @@ class AsyncRequestHandler:
             encoded_data.append(f"${len(element)}\r\n{element}\r\n")
         
         return ''.join(encoded_data).encode()
-    def parse_redis_protocol(self, data: bytes):
+    def parse_redis_protocol(data: bytes):
         try:
             parts = data.split(b'\r\n')
-            if not parts or parts[0][0] != ord(b'*'):
-                return None
-            
-            num_elements = int(parts[0][1:])
-            elements = []
-            index = 1
-            
-            for _ in range(num_elements):
-                if parts[index][0] != ord(b'$'):
-                    return None
-                index += 1
-                element = parts[index].decode('utf-8')
-                index += 1
-                elements.append([element])
-            print("ELEMENTS: ", elements)
-            return elements
+            commands = []
+            index = 0
+            while index < len(parts) - 1:
+                if parts[index] and parts[index][0] == ord(b'*'):
+                    num_elements = int(parts[index][1:])
+                    index += 1
+                    elements = []
+                    for _ in range(num_elements):
+                        if parts[index] and parts[index][0] == ord(b'$'):
+                            element_length = int(parts[index][1:])
+                            index += 1
+                            element = parts[index].decode('utf-8')
+                            elements.append(element)
+                            index += 1
+                    commands.append(elements)
+                else:
+                    index += 1
+            return commands
         except (IndexError, ValueError):
             return None
-    
+
         
     def generate_random_string(self, length: int) -> str:
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
