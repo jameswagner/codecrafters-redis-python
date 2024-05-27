@@ -240,6 +240,7 @@ class AsyncRequestHandler:
             while index < len(parts) - 1:
                 if parts[index] and parts[index][0] == ord(b'*'):
                     num_elements = int(parts[index][1:])
+                    offset += len(str(num_elements)) + 3  # Add the length of the number of elements and the length of the * and \r\n characters
                     index += 1
                     elements = []
                     for _ in range(num_elements):
