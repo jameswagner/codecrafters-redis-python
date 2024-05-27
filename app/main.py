@@ -101,6 +101,7 @@ class AsyncRequestHandler:
         self.expiration = server.expiration
         self.replica_server = server.replica_server
         self.replica_port = server.replica_port
+        self.offset = 0
 
     async def process_request(self) -> None:
         while True:
@@ -108,6 +109,7 @@ class AsyncRequestHandler:
             if not request:
                 break
             logging.info(f"Request: {request}")
+            self.offset += len(request)
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
@@ -141,7 +143,7 @@ class AsyncRequestHandler:
         if responses:
             if self.replica_server is not None and self.writer.get_extra_info("peername") == (self.replica_server, self.replica_port):
                 print("RESPONSES before: ", responses)
-                responses = [response for response in responses if response == "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"]
+                responses = [response for response in responses if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK")]
                 print("RESPONSES after: ", responses)
             self.writer.write(''.join(responses).encode())
             await self.writer.drain()
@@ -153,7 +155,7 @@ class AsyncRequestHandler:
         if len(command) > 2 and command[1] == "listening-port":
             self.server.writers.append(writer)
         elif len(command) > 2 and command[1] == "GETACK":
-            response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"
+            response = f"*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n${len(str(self.offset))}\r\n{self.offset}\r\n"
             print(f"REPLCONF ACK: {response}")
             return response
         return "+OK\r\n"
