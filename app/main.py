@@ -28,11 +28,11 @@ class AsyncServer:
             response = await instance.send_ping(reader, writer)
             if response != "+PONG\r\n":
                 raise ValueError("Failed to receive PONG from replica server")
+            await asyncio.create_task(instance.accept_connections(reader, writer))
 
             await instance.send_replconf_command(reader, writer, port)
             await instance.send_additional_replconf_command(reader, writer)
             await instance.send_psync_command(reader, writer)
-            await asyncio.create_task(instance.accept_connections(reader, writer))
             #writer.close()
             #await writer.wait_closed()
         async with instance.inner_server as server:
@@ -108,30 +108,35 @@ class AsyncRequestHandler:
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
-        command = self.parse_redis_protocol(request)
-        if not command:
+        commands = self.parse_redis_protocol(request)
+        if not commands:
             logging.info("Received invalid data")
             return
 
-        cmd_name = command[0].upper()  # Command names are case-insensitive
-        if cmd_name == "PING":
-            response = await self.handle_ping()
-        elif cmd_name == "ECHO" and len(command) > 1:
-            response = await self.handle_echo(command)
-        elif cmd_name == "SET" and len(command) > 2:
-            response = await self.handle_set(command)
-        elif cmd_name == "GET" and len(command) > 1:
-            response = await self.handle_get(command)
-        elif cmd_name == "INFO" and len(command) > 1:
-            response = await self.handle_info(command)
-        elif cmd_name == "REPLCONF":
-            response = await self.handle_replconf(command, self.writer)
-        elif cmd_name == "PSYNC":
-            response = await self.handle_psync(command)
-        else:
-            response = await self.handle_unknown()
-        if response:
-            self.writer.write(response.encode())
+        responses = []
+        for cmd in commands:
+            cmd_name = cmd[0].upper()  # Command names are case-insensitive
+            if cmd_name == "PING":
+                response = await self.handle_ping()
+            elif cmd_name == "ECHO" and len(cmd) > 1:
+                response = await self.handle_echo(cmd)
+            elif cmd_name == "SET" and len(cmd) > 2:
+                response = await self.handle_set(cmd)
+            elif cmd_name == "GET" and len(cmd) > 1:
+                response = await self.handle_get(cmd)
+            elif cmd_name == "INFO" and len(cmd) > 1:
+                response = await self.handle_info(cmd)
+            elif cmd_name == "REPLCONF":
+                response = await self.handle_replconf(cmd, self.writer)
+            elif cmd_name == "PSYNC":
+                response = await self.handle_psync(cmd)
+            else:
+                response = await self.handle_unknown()
+            if response:
+                responses.append(response)
+        
+        if responses:
+            self.writer.write(''.join(responses).encode())
             await self.writer.drain()
 
     async def handle_ping(self) -> str:
