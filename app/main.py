@@ -7,6 +7,8 @@ from typing import List
 import random
 import string
 
+import hiredis
+
 class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
         self.host = host
@@ -109,6 +111,7 @@ class AsyncRequestHandler:
 
     async def handle_request(self, request: bytes) -> None:
         command = self.parse_redis_protocol(request)
+        print(f"COMMAND: {command}")
         if not command:
             logging.info("Received invalid data")
             return
@@ -208,28 +211,24 @@ class AsyncRequestHandler:
         
         return ''.join(encoded_data).encode()
 
-    def parse_redis_protocol(self, data: bytes):
-        try:
-            parts = data.split(b'\r\n')
-            if not parts or parts[0][0] != ord(b'*'):
-                return None
-            
-            num_elements = int(parts[0][1:])
-            elements = []
-            index = 1
-            
-            for _ in range(num_elements):
-                if parts[index][0] != ord(b'$'):
-                    return None
-                
-                length = int(parts[index][1:])
-                index += 1
-                elements.append(parts[index].decode('utf-8'))
-                index += 1
 
-            return elements
-        except (IndexError, ValueError):
-            return None
+    def parse_redis_protocol(self, data: bytes):
+        parser = hiredis.Reader()
+        parser.feed(data)
+        
+        commands = []
+        while True:
+            try:
+                command = parser.gets()
+                if command is False:
+                    break
+                commands.append(command)
+            except hiredis.ProtocolError:
+                return None
+
+        return commands
+        
+    
         
     def generate_random_string(self, length: int) -> str:
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
