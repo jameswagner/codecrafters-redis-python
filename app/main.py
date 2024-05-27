@@ -117,8 +117,7 @@ class AsyncRequestHandler:
             logging.info("Received invalid data")
             return
 
-        responses = []
-        for cmd in commands:
+        for index, cmd in enumerate(commands):
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
             if cmd_name == "PING":
                 response = await self.handle_ping()
@@ -136,20 +135,16 @@ class AsyncRequestHandler:
                 response = await self.handle_psync(cmd)
             else:
                 response = await self.handle_unknown()
-            if response:
-                responses.append(response)
-        
-        if responses:
-            for index, response in enumerate(responses):
-                if self.replica_server is not None and self.writer.get_extra_info("peername")[1] == self.replica_port:
-                    if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK"):
-                        self.writer.write(response.encode())
-                        await self.writer.drain()
-                    self.offset += lengths[index]
-                else:
+
+            if self.replica_server is not None and self.writer.get_extra_info("peername")[1] == self.replica_port:
+                if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK"):
                     self.writer.write(response.encode())
                     await self.writer.drain()
-                    self.offset += lengths[index]
+                self.offset += lengths[index]
+            else:
+                self.writer.write(response.encode())
+                await self.writer.drain()
+                self.offset += lengths[index]
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
