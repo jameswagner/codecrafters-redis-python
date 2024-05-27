@@ -223,6 +223,7 @@ class AsyncRequestHandler:
     def parse_redis_protocol(self, data: bytes):
         try:
             data = data[data.index(b'*')]
+            print(data)
             parts = data.split(b'\r\n')
             commands = []
             index = 0
