@@ -139,7 +139,7 @@ class AsyncRequestHandler:
                 responses.append(response)
         
         if responses:
-            if self.replica_server is not None:
+            if self.replica_server is not None and self.writer.get_extra_info("peername") == (self.replica_server, self.replica_port):
                 print("RESPONSES before: ", responses)
                 responses = [response for response in responses if response == "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"]
                 print("RESPONSES after: ", responses)
