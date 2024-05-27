@@ -235,6 +235,7 @@ class AsyncRequestHandler:
             parts = data.split(b'\r\n')
             commands = []
             lengths = []  # New array to store the lengths of the substrings used for commands
+            offset = 0  # Variable to keep track of the offset
             index = 0
             while index < len(parts) - 1:
                 if parts[index] and parts[index][0] == ord(b'*'):
@@ -248,10 +249,12 @@ class AsyncRequestHandler:
                             element = parts[index].decode('utf-8')
                             elements.append(element)
                             index += 1
+                            offset += element_length + 2 
                     commands.append(elements)
-                    lengths.append(index)  # Store the index as the length of the substring used for the command
+                    lengths.append(offset)  # Store the offset as the length of the substring used for the command
                 else:
                     index += 1
+
             print("COMMANDS: ", commands)
             print("LENGTHS: ", lengths)
             return commands, lengths  # Return the commands and lengths arrays
