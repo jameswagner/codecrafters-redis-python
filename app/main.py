@@ -137,6 +137,8 @@ class AsyncRequestHandler:
                 responses.append(response)
         
         if responses:
+            if self.replica_server is not None:
+                responses = [response for response in responses if response == "+REPLCONF ACK 0\r\n"]
             self.writer.write(''.join(responses).encode())
             await self.writer.drain()
 
@@ -146,6 +148,9 @@ class AsyncRequestHandler:
     async def handle_replconf(self, command: List[str], writer: asyncio.StreamWriter) -> str:
         if len(command) > 2 and command[1] == "listening-port":
             self.server.writers.append(writer)
+        elif len(command) > 2 and command[1] == "getack":
+            response = "+REPLCONF ACK 0\r\n"
+            return response
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
