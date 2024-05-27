@@ -112,7 +112,7 @@ class AsyncRequestHandler:
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
-        commands, length = self.parse_redis_protocol(request)
+        commands, lengths = self.parse_redis_protocol(request)
         if not commands:
             logging.info("Received invalid data")
             return
@@ -140,14 +140,16 @@ class AsyncRequestHandler:
                 responses.append(response)
         
         if responses:
-            print(f"{self.writer.get_extra_info('peername')} RESPONSES: {responses}, {self.replica_server} {self.replica_port}")
-            if self.replica_server is not None and self.writer.get_extra_info("peername")[1] == self.replica_port:
-                print("RESPONSES before: ", responses)
-                responses = [response for response in responses if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK")]
-                print("RESPONSES after: ", responses)
-            self.writer.write(''.join(responses).encode())
-            await self.writer.drain()
-        self.offset += length
+            for index, response in enumerate(responses):
+                if self.replica_server is not None and self.writer.get_extra_info("peername")[1] == self.replica_port:
+                    if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK"):
+                        self.writer.write(response.encode())
+                        await self.writer.drain()
+                    self.offset += lengths[index]
+                else:
+                    self.writer.write(response.encode())
+                    await self.writer.drain()
+                    self.offset += lengths[index]
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
@@ -232,6 +234,7 @@ class AsyncRequestHandler:
             print(data)
             parts = data.split(b'\r\n')
             commands = []
+            lengths = []  # New array to store the lengths of the substrings used for commands
             index = 0
             while index < len(parts) - 1:
                 if parts[index] and parts[index][0] == ord(b'*'):
@@ -246,12 +249,14 @@ class AsyncRequestHandler:
                             elements.append(element)
                             index += 1
                     commands.append(elements)
+                    lengths.append(index)  # Store the index as the length of the substring used for the command
                 else:
                     index += 1
             print("COMMANDS: ", commands)
-            return commands, len(data)
+            print("LENGTHS: ", lengths)
+            return commands, lengths  # Return the commands and lengths arrays
         except (IndexError, ValueError):
-            return [], 0
+            return [], []  # Return empty arrays if there was an error
 
         
     def generate_random_string(self, length: int) -> str:
