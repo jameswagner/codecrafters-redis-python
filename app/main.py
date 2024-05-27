@@ -152,6 +152,7 @@ class AsyncRequestHandler:
             self.server.writers.append(writer)
         elif len(command) > 2 and command[1] == "GETACK":
             response = "+REPLCONF ACK 0\r\n"
+            print(f"REPLCONF ACK: {response}")
             return response
         return "+OK\r\n"
 
