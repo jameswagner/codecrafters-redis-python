@@ -112,7 +112,7 @@ class AsyncRequestHandler:
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
-        commands = self.parse_redis_protocol(request)
+        commands, length = self.parse_redis_protocol(request)
         if not commands:
             logging.info("Received invalid data")
             return
@@ -146,8 +146,7 @@ class AsyncRequestHandler:
                 print("RESPONSES after: ", responses)
             self.writer.write(''.join(responses).encode())
             await self.writer.drain()
-        for cmd in commands:
-            self.offset += len(cmd.join(""))
+        self.offset += length
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
@@ -249,7 +248,7 @@ class AsyncRequestHandler:
                 else:
                     index += 1
             print("COMMANDS: ", commands)
-            return commands
+            return commands, len(data)
         except (IndexError, ValueError):
             return None
 
