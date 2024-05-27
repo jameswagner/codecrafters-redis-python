@@ -109,7 +109,6 @@ class AsyncRequestHandler:
             if not request:
                 break
             logging.info(f"Request: {request}")
-            self.offset += len(request)
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
@@ -147,6 +146,8 @@ class AsyncRequestHandler:
                 print("RESPONSES after: ", responses)
             self.writer.write(''.join(responses).encode())
             await self.writer.drain()
+        for cmd in commands:
+            self.offset += len(cmd.join(""))
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
