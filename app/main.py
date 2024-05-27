@@ -140,7 +140,9 @@ class AsyncRequestHandler:
         
         if responses:
             if self.replica_server is not None:
+                print("RESPONSES before: ", responses)
                 responses = [response for response in responses if response == "+REPLCONF ACK 0\r\n"]
+                print("RESPONSES after: ", responses)
             self.writer.write(''.join(responses).encode())
             await self.writer.drain()
 
