@@ -148,7 +148,7 @@ class AsyncRequestHandler:
     async def handle_replconf(self, command: List[str], writer: asyncio.StreamWriter) -> str:
         if len(command) > 2 and command[1] == "listening-port":
             self.server.writers.append(writer)
-        elif len(command) > 2 and command[1] == "getack":
+        elif len(command) > 2 and command[1] == "GETACK":
             response = "+REPLCONF ACK 0\r\n"
             return response
         return "+OK\r\n"
