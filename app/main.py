@@ -246,6 +246,7 @@ class AsyncRequestHandler:
                     for _ in range(num_elements):
                         if parts[index] and parts[index][0] == ord(b'$'):
                             element_length = int(parts[index][1:])
+                            offset += len(str(element_length)) + 3  # Add the length of the element length and the length of the $ and \r\n characters
                             index += 1
                             element = parts[index].decode('utf-8')
                             elements.append(element)
