@@ -141,7 +141,7 @@ class AsyncRequestHandler:
         
         if responses:
             print(f"{self.writer.get_extra_info('peername')} RESPONSES: {responses}, {self.replica_server} {self.replica_port}")
-            if self.replica_server is not None and self.writer.get_extra_info("peername") == (self.replica_server, self.replica_port):
+            if self.replica_server is not None and self.writer.get_extra_info("peername")[1] == self.replica_port:
                 print("RESPONSES before: ", responses)
                 responses = [response for response in responses if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK")]
                 print("RESPONSES after: ", responses)
