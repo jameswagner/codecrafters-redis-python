@@ -250,7 +250,7 @@ class AsyncRequestHandler:
             print("COMMANDS: ", commands)
             return commands, len(data)
         except (IndexError, ValueError):
-            return None
+            return [], 0
 
         
     def generate_random_string(self, length: int) -> str:
