@@ -148,8 +148,8 @@ class AsyncRequestHandler:
                 self.offset += lengths[index]
 
     async def handle_wait(self, command: List[str]) -> str:
-        max_wait_ms = int(command[1])
-        num_replicas = int(command[2])
+        max_wait_ms = int(command[2])
+        num_replicas = int(command[1])
         
         self.numacks = 0
         for writer in self.server.writers:
