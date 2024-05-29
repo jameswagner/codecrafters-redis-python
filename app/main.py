@@ -153,7 +153,7 @@ class AsyncRequestHandler:
         
         self.numacks = 0
         for writer in self.server.writers:
-            writer.write(b"*2\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n")
+            writer.write(b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n")
             await writer.drain()
         
         start_time = time.time()
