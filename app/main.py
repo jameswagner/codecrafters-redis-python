@@ -158,7 +158,6 @@ class AsyncRequestHandler:
         
         start_time = time.time()
         while self.numacks < num_replicas and (time.time() - start_time) < (max_wait_ms / 1000):
-            print(f"NUMACKS: {self.numacks}, NUM_REPLICAS: {num_replicas}, TIME: {time.time() - start_time}, MAX_WAIT: {max_wait_ms / 1000}")
             await asyncio.sleep(0.1)
         print("SENDING BACK", self.numacks)
         return f":{self.numacks}\r\n"
@@ -174,6 +173,7 @@ class AsyncRequestHandler:
             print(f"REPLCONF ACK: {response}")
             return response
         elif len(command) > 2 and command[1] == "ACK":
+            print("Incrementing num acks")
             self.numacks += 1
         return "+OK\r\n"
 
