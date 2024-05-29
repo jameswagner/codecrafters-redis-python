@@ -147,7 +147,7 @@ class AsyncRequestHandler:
                 self.offset += lengths[index]
 
     async def handle_wait(self, command: List[str]) -> str:
-        return ":0\r\n"
+        return f":{len(self.server.writers)}\r\n"
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
