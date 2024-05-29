@@ -158,6 +158,7 @@ class AsyncRequestHandler:
         
         start_time = time.time()
         while self.numacks < num_replicas and (time.time() - start_time) < (max_wait_ms / 1000):
+            print(f"NUMACKS: {self.numacks} num_replicas: {num_replicas} max_wait_ms: {max_wait_ms} time: {time.time()} start_time: {start_time}")
             await asyncio.sleep(0.1)
         print("SENDING BACK", self.numacks)
         return f":{self.numacks}\r\n"
