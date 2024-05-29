@@ -151,7 +151,7 @@ class AsyncRequestHandler:
         max_wait_ms = int(command[2])
         num_replicas = int(command[1])
         
-        self.numacks = 0
+        
         for writer in self.server.writers:
             writer.write(b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n")
             await writer.drain()
@@ -211,7 +211,8 @@ class AsyncRequestHandler:
             expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
             self.expiration[command[1]] = time.time() + expiration_duration
         else:
-            self.expiration[command[1]] = None  
+            self.expiration[command[1]] = None
+        self.numacks = 0  
         for writer in self.server.writers:
             writer.write(self.encode_redis_protocol(command))
             await writer.drain()
