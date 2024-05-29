@@ -157,7 +157,7 @@ class AsyncRequestHandler:
             await writer.drain()
         
         start_time = time.time()
-        while self.numacks < num_replicas or (time.time() - start_time) < (max_wait_ms / 1000):
+        while self.numacks < num_replicas or (time.time() - start_time) < (max_wait_ms // 1000):
             await asyncio.sleep(0.1)
         
         return f":{self.numacks}\r\n"
