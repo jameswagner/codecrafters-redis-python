@@ -175,8 +175,8 @@ class AsyncRequestHandler:
             return response
         elif len(command) > 2 and command[1] == "ACK":
             print("Incrementing num acks")
-            print(f"NUMACKS: {self.numacks}")
             self.numacks += 1
+            print(f"NUMACKS: {self.numacks}")
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
