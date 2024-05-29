@@ -17,6 +17,7 @@ class AsyncServer:
         self.expiration = {}
         self.writers = []
         self.inner_server = None
+        self.numacks = 0
 
     @classmethod
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
@@ -100,7 +101,6 @@ class AsyncRequestHandler:
         self.replica_server = server.replica_server
         self.replica_port = server.replica_port
         self.offset = 0
-        self.numacks = 0
 
     async def process_request(self) -> None:
         while True:
@@ -157,11 +157,11 @@ class AsyncRequestHandler:
             await writer.drain()
         
         start_time = time.time()
-        while self.numacks < num_replicas and (time.time() - start_time) < (max_wait_ms / 1000):
-            print(f"NUMACKS: {self.numacks} num_replicas: {num_replicas} max_wait_ms: {max_wait_ms} time: {time.time()} start_time: {start_time}")
+        while self.server.numacks < num_replicas and (time.time() - start_time) < (max_wait_ms / 1000):
+            print(f"NUMACKS: {self.server.numacks} num_replicas: {num_replicas} max_wait_ms: {max_wait_ms} time: {time.time()} start_time: {start_time}")
             await asyncio.sleep(0.1)
-        print("SENDING BACK", self.numacks)
-        return f":{self.numacks}\r\n"
+        print("SENDING BACK", self.server.numacks)
+        return f":{self.server.numacks}\r\n"
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
@@ -175,8 +175,7 @@ class AsyncRequestHandler:
             return response
         elif len(command) > 2 and command[1] == "ACK":
             print("Incrementing num acks")
-            self.numacks += 1
-            print(f"NUMACKS: {self.numacks}")
+            self.server.numacks += 1
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
@@ -213,7 +212,7 @@ class AsyncRequestHandler:
             self.expiration[command[1]] = time.time() + expiration_duration
         else:
             self.expiration[command[1]] = None
-        self.numacks = 0  
+        self.server.numacks = 0  
         for writer in self.server.writers:
             writer.write(self.encode_redis_protocol(command))
             await writer.drain()
