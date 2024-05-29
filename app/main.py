@@ -82,8 +82,6 @@ class AsyncServer:
         logging.info(f"Server started at http://{addr[0]}:{addr[1]}")
         return server
 
-        
-
     async def accept_connections(
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
@@ -133,6 +131,8 @@ class AsyncRequestHandler:
                 response = await self.handle_replconf(cmd, self.writer)
             elif cmd_name == "PSYNC":
                 response = await self.handle_psync(cmd)
+            elif cmd_name == "WAIT" and len(cmd) > 2:
+                response = await self.handle_wait(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -145,6 +145,9 @@ class AsyncRequestHandler:
                 self.writer.write(response.encode())
                 await self.writer.drain()
                 self.offset += lengths[index]
+
+    async def handle_wait(self, command: List[str]) -> str:
+        return ":0\r\n"
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
