@@ -100,6 +100,7 @@ class AsyncRequestHandler:
         self.replica_server = server.replica_server
         self.replica_port = server.replica_port
         self.offset = 0
+        self.numacks = 0
 
     async def process_request(self) -> None:
         while True:
@@ -147,7 +148,19 @@ class AsyncRequestHandler:
                 self.offset += lengths[index]
 
     async def handle_wait(self, command: List[str]) -> str:
-        return f":{len(self.server.writers)}\r\n"
+        max_wait_ms = int(command[1])
+        num_replicas = int(command[2])
+        
+        self.numacks = 0
+        for writer in self.server.writers:
+            writer.write(b"*2\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n")
+            await writer.drain()
+        
+        start_time = time.time()
+        while self.numacks < num_replicas or (time.time() - start_time) < (max_wait_ms / 1000):
+            await asyncio.sleep(0.1)
+        
+        return f":{self.numacks}\r\n"
 
     async def handle_ping(self) -> str:
         return "+PONG\r\n"
@@ -159,6 +172,8 @@ class AsyncRequestHandler:
             response = f"*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n${len(str(self.offset))}\r\n{self.offset}\r\n"
             print(f"REPLCONF ACK: {response}")
             return response
+        elif len(command) > 2 and command[1] == "ACK":
+            self.numacks += 1
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
