@@ -190,6 +190,7 @@ class AsyncRequestHandler:
         self.writer.write(header.encode())
         self.writer.write(binary_data)
         await self.writer.drain()
+        self.server.numacks += 1
         return ""
 
     async def handle_info(self, command: List[str]) -> str:
