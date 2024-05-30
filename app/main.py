@@ -216,6 +216,7 @@ class AsyncRequestHandler:
             self.expiration[command[1]] = None
         self.server.numacks = 0  
         for writer in self.server.writers:
+            print(f"writing CMD {command} to writer: {writer.get_extra_info('peername')}")
             writer.write(self.encode_redis_protocol(command))
             await writer.drain()
         return "+OK\r\n"
