@@ -143,8 +143,9 @@ class AsyncRequestHandler:
                     await self.writer.drain()
                 self.offset += lengths[index]
             else:
-                self.writer.write(response.encode())
-                await self.writer.drain()
+                if response:
+                    self.writer.write(response.encode())
+                    await self.writer.drain()
                 self.offset += lengths[index]
 
     async def handle_wait(self, command: List[str]) -> str:
@@ -216,7 +217,8 @@ class AsyncRequestHandler:
         for writer in self.server.writers:
             writer.write(self.encode_redis_protocol(command))
             await writer.drain()
-        return "+OK\r\n"
+        #return "+OK\r\n"
+        return None
 
     async def handle_get(self, command: List[str]) -> str:
         if self.expiration.get(command[1], None) and self.expiration[command[1]] < time.time():
