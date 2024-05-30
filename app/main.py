@@ -144,6 +144,7 @@ class AsyncRequestHandler:
                 self.offset += lengths[index]
             else:
                 if response:
+                    print(f"sending response: {response} to self.writer.get_extra_info('peername')")
                     self.writer.write(response.encode())
                     await self.writer.drain()
                 self.offset += lengths[index]
@@ -217,8 +218,8 @@ class AsyncRequestHandler:
         for writer in self.server.writers:
             writer.write(self.encode_redis_protocol(command))
             await writer.drain()
-        #return "+OK\r\n"
-        return None
+        return "+OK\r\n"
+        #return None
 
     async def handle_get(self, command: List[str]) -> str:
         if self.expiration.get(command[1], None) and self.expiration[command[1]] < time.time():
