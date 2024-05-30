@@ -143,7 +143,7 @@ class AsyncRequestHandler:
                     await self.writer.drain()
                 self.offset += lengths[index]
             else:
-                if self.writer.get_extra_info('peername') not in self.server.writers or cmd_name != "SET":
+                if self.writer.get_extra_info('peername') not in [writer.get_extra_info('peername') for writer in self.server.writers] or cmd_name != "SET":
                     print(f"sending response: {response} to {self.writer.get_extra_info('peername')} command: {cmd}")
                     self.writer.write(response.encode())
                     await self.writer.drain()
