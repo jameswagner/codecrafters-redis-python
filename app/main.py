@@ -144,7 +144,7 @@ class AsyncRequestHandler:
                 self.offset += lengths[index]
             else:
                 if response:
-                    print(f"sending response: {response} to {self.writer.get_extra_info('peername')}")
+                    print(f"sending response: {response} to {self.writer.get_extra_info('peername')} command: {cmd}")
                     self.writer.write(response.encode())
                     await self.writer.drain()
                 self.offset += lengths[index]
