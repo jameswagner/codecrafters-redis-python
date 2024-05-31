@@ -8,7 +8,7 @@ import random
 import string
 
 class AsyncServer:
-    def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
+    def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None, dir: str = '', dbfilename: str = ''):
         self.host = host
         self.port = port
         self.replica_server = replica_server
@@ -18,6 +18,7 @@ class AsyncServer:
         self.writers = []
         self.inner_server = None
         self.numacks = 0
+        self.config = {"dir": dir, "dbfilename": dbfilename}
 
     @classmethod
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
@@ -134,6 +135,8 @@ class AsyncRequestHandler:
                 response = await self.handle_psync(cmd)
             elif cmd_name == "WAIT" and len(cmd) > 2:
                 response = await self.handle_wait(cmd)
+            elif cmd_name == "CONFIG" and len(cmd) > 1:
+                response = await self.handle_config_get(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -148,6 +151,29 @@ class AsyncRequestHandler:
                     self.writer.write(response.encode())
                     await self.writer.drain()
                 self.offset += lengths[index]
+
+    async def handle_config_get(self, command: List[str]) -> str:
+        if len(command) > 1:
+            config_params = command[2:]
+            response = []
+            for param in config_params:
+                response.append(param)
+                if param in self.server.config:
+                    value = self.server.config[param]
+                    response.append(value)
+                else:
+                    response.append("(nil)")
+            return self.as_array(response)
+
+    def as_array(self, data: List[str]) -> str:
+        encoded_data = []
+        encoded_data.append(f"*{len(data)}\r\n")
+        
+        for element in data:
+            encoded_data.append(f"${len(element)}\r\n{element}\r\n")
+        
+        return ''.join(encoded_data)
+
 
     async def handle_wait(self, command: List[str]) -> str:
         max_wait_ms = int(command[2])
@@ -298,6 +324,8 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Run the Async Redis-like server.")
     parser.add_argument('--port', type=int, default=6379, help='Port to run the server on')
     parser.add_argument('--replicaof', type=str, default=None, help='Replicate data from a master server')
+    parser.add_argument('--dir', type=str, default='', help='Path to the directory where the RDB file is stored')
+    parser.add_argument('--dbfilename', type=str, default='', help='Name of the RDB file')
     args = parser.parse_args()
     replica_server, replica_port = None, None
 
@@ -310,7 +338,7 @@ async def main() -> None:
         # Use replica_server and replica_port as needed
 
     logging.basicConfig(level=logging.INFO)
-    server = await AsyncServer.create(port=args.port, replica_server=replica_server, replica_port=replica_port)
+    server = await AsyncServer.create(port=args.port, replica_server=replica_server, replica_port=replica_port, dir=args.dir, dbfilename=args.dbfilename)
     #await server.start()
 
 if __name__ == "__main__":
