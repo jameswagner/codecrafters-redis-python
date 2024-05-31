@@ -21,8 +21,8 @@ class AsyncServer:
         self.config = {"dir": dir, "dbfilename": dbfilename}
 
     @classmethod
-    async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None):
-        instance = cls(host, port, replica_server, replica_port)
+    async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None, dir: str = '', dbfilename: str = ''):
+        instance = cls(host, port, replica_server, replica_port, dir, dbfilename)
         instance.inner_server = await instance.start()
         
         if replica_server is not None and replica_port is not None:
