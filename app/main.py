@@ -333,8 +333,8 @@ class AsyncRequestHandler:
         with open(file_path, "rb") as file:
             print("File Path:", file_path)
             for line in file:
-                print(line.decode().strip())
-            return unexpired_keys
+                print(line)
+            #return unexpired_keys
         
         with open(file_path, "rb") as file:
             magic_string = file.read(5)
@@ -342,8 +342,7 @@ class AsyncRequestHandler:
             # Check magic string and rdb version
             
             while True:
-                field_type = file.read(1)
-                print(field_type)
+                field_type = file.read(1).upper()
                 if field_type == b"\xFA":
                     # Auxiliary field, skip it
                     metadata_length = int.from_bytes(file.read(4), byteorder="big")
