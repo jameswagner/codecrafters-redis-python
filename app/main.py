@@ -340,12 +340,14 @@ class AsyncRequestHandler:
             magic_string = file.read(5)
             rdb_version = file.read(4)
             # Check magic string and rdb version
-            
+            print(f"Magic String: {magic_string}, RDB Version: {rdb_version}")
             while True:
                 field_type = file.read(1).upper()
+                print(f"Field Type: {field_type}")
                 if field_type == b"\xFA":
                     # Auxiliary field, skip it
                     metadata_length = int.from_bytes(file.read(4), byteorder="big")
+                    print(f"Metadata Length: {metadata_length}")
                     file.seek(metadata_length, 1)
                 
                 elif field_type == b"\xFE":
