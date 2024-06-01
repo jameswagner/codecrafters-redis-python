@@ -337,7 +337,7 @@ class AsyncRequestHandler:
             
             while True:
                 field_type = file.read(1)
-                
+                print(field_type)
                 if field_type == b"\xFA":
                     # Auxiliary field, skip it
                     metadata_length = int.from_bytes(file.read(4), byteorder="big")
