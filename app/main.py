@@ -331,6 +331,12 @@ class AsyncRequestHandler:
     def parse_redis_file(self, file_path: str) -> List[str]:
         unexpired_keys = []
         with open(file_path, "rb") as file:
+            print("File Path:", file_path)
+            for line in file:
+                print(line.decode().strip())
+            return unexpired_keys
+        
+        with open(file_path, "rb") as file:
             magic_string = file.read(5)
             rdb_version = file.read(4)
             # Check magic string and rdb version
