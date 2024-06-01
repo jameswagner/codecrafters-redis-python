@@ -138,6 +138,8 @@ class AsyncRequestHandler:
                 response = await self.handle_wait(cmd)
             elif cmd_name == "CONFIG" and len(cmd) > 1:
                 response = await self.handle_config_get(cmd)
+            elif cmd_name == "KEYS":
+                response = await self.handle_keys(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -152,6 +154,10 @@ class AsyncRequestHandler:
                     self.writer.write(response.encode())
                     await self.writer.drain()
                 self.offset += lengths[index]
+                
+    async def handle_keys(self, command: List[str]) -> str:
+        keys = self.get_keys_array()
+        return keys
 
     async def handle_config_get(self, command: List[str]) -> str:
         if len(command) > 1:
