@@ -2,8 +2,9 @@ import argparse
 import asyncio
 import base64
 import logging
+from pathlib import Path
 import time
-from typing import List
+from typing import Any, BinaryIO, List
 import random
 import string
 
@@ -315,6 +316,77 @@ class AsyncRequestHandler:
         
     def generate_random_string(self, length: int) -> str:
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    
+    def get_keys_array(self) -> str:
+        keys = self.parse_redis_file(Path(self.server.config["dir"]) / self.server.config["dbfilename"])
+        encoded_keys = self.as_array(keys)
+        return encoded_keys
+
+    def parse_redis_file(self, file_path: str) -> List[str]:
+        unexpired_keys = []
+        with open(file_path, "rb") as file:
+            magic_string = file.read(5)
+            rdb_version = file.read(4)
+            # Check magic string and rdb version
+            
+            while True:
+                field_type = file.read(1)
+                
+                if field_type == b"\xFA":
+                    # Auxiliary field, skip it
+                    metadata_length = int.from_bytes(file.read(4), byteorder="big")
+                    file.seek(metadata_length, 1)
+                
+                elif field_type == b"\xFE":
+                    # Database selector field
+                    db_number = int.from_bytes(file.read(1), byteorder="big")
+                    # Skip resizedb field
+                    file.seek(9, 1)
+                
+                elif field_type == b"\xFD":
+                    # Key-value pair with expiry time in seconds
+                    expiry_time = int.from_bytes(file.read(4), byteorder="big")
+                    value_type = file.read(1)
+                    key_length = int.from_bytes(file.read(2), byteorder="big")
+                    key = file.read(key_length)
+                    value = self.read_encoded_value(file, value_type)
+                    # Check if key has expired
+                    if expiry_time > 0 and expiry_time < time.time():
+                        unexpired_keys.append(key.decode())
+                
+                elif field_type == b"\xFC":
+                    # Key-value pair with expiry time in milliseconds
+                    expiry_time = int.from_bytes(file.read(8), byteorder="big")
+                    value_type = file.read(1)
+                    key_length = int.from_bytes(file.read(2), byteorder="big")
+                    key = file.read(key_length)
+                    value = self.read_encoded_value(file, value_type)
+                    # Check if key has expired
+                    if expiry_time > 0 and expiry_time < time.time() * 1000:
+                        unexpired_keys.append(key.decode())
+                
+                elif field_type == b"\xFF":
+                    # End of RDB file
+                    break
+                
+                else:
+                    # Key-value pair without expiry
+                    value_type = field_type
+                    key_length = int.from_bytes(file.read(2), byteorder="big")
+                    key = file.read(key_length)
+                    value = self.read_encoded_value(file, value_type)
+                    unexpired_keys.append(key.decode())
+        
+        return unexpired_keys
+
+    def read_encoded_value(self, file: BinaryIO, value_type: bytes) -> Any:
+        if value_type == b"\x00":
+            # String value
+            value_length = int.from_bytes(file.read(2), byteorder="big")
+            return file.read(value_length)        
+        else:
+            # Unknown value type
+            return None
 
 async def main() -> None:
     global ping_count
