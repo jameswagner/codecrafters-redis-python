@@ -162,6 +162,7 @@ class AsyncServer:
                     print(f"Key length: {key_length} Key: {key}, Value: {value}")
                 if key and value:
                     hash_map[key.decode()] = value
+        print("HASH MAP:", hash_map)
         return hash_map
 
     def read_encoded_value(self, file: BinaryIO, value_type: bytes) -> Any:
