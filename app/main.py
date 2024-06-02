@@ -147,7 +147,7 @@ class AsyncServer:
                     # Key-value pair with expiry time in seconds
                     expiry_time = int.from_bytes(file.read(4), byteorder="big")
                     value_type = file.read(1)
-                    key_length = int.from_bytes(file.read(2), byteorder="big")
+                    key_length = int.from_bytes(file.read(1), byteorder="big")
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
                     # Check if key has expired
@@ -157,7 +157,7 @@ class AsyncServer:
                     # Key-value pair with expiry time in milliseconds
                     expiry_time = int.from_bytes(file.read(8), byteorder="big")
                     value_type = file.read(1)
-                    key_length = int.from_bytes(file.read(2), byteorder="big")
+                    key_length = int.from_bytes(file.read(1), byteorder="big")
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
                     # Check if key has expired
