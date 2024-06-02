@@ -342,20 +342,22 @@ class AsyncRequestHandler:
             # Check magic string and rdb version
             print(f"Magic String: {magic_string}, RDB Version: {rdb_version}")
             while True:
-                field_type = file.read(1).upper()
-                print(f"Field Type: {field_type}")
-                if field_type == b"\xFA":
-                    # Auxiliary field, skip it
-                    metadata_length = int.from_bytes(file.read(4), byteorder="big")
-                    print(f"Metadata Length: {metadata_length}")
-                    file.seek(metadata_length, 1)
-                
-                elif field_type == b"\xFE":
+                field_type = file.peek(1).upper()
+                if field_type == b"\xFE":
                     # Database selector field
                     db_number = int.from_bytes(file.read(1), byteorder="big")
                     # Skip resizedb field
                     file.seek(9, 1)
-                
+                    break
+                file.read(1)
+            while True:
+                field_type = file.read(1)
+                if field_type == b"\xFE":
+                    # Database selector field
+                    db_number = int.from_bytes(file.read(1), byteorder="big")
+                    # Skip resizedb field
+                elif field_type == b"\xfb":
+                    file.read(2)
                 elif field_type == b"\xFD":
                     # Key-value pair with expiry time in seconds
                     expiry_time = int.from_bytes(file.read(4), byteorder="big")
@@ -366,7 +368,6 @@ class AsyncRequestHandler:
                     # Check if key has expired
                     if expiry_time > 0 and expiry_time < time.time():
                         unexpired_keys.append(key.decode())
-                
                 elif field_type == b"\xFC":
                     # Key-value pair with expiry time in milliseconds
                     expiry_time = int.from_bytes(file.read(8), byteorder="big")
@@ -377,17 +378,16 @@ class AsyncRequestHandler:
                     # Check if key has expired
                     if expiry_time > 0 and expiry_time < time.time() * 1000:
                         unexpired_keys.append(key.decode())
-                
                 elif field_type == b"\xFF":
                     # End of RDB file
                     break
-                
                 else:
                     # Key-value pair without expiry
                     value_type = field_type
-                    key_length = int.from_bytes(file.read(2), byteorder="big")
+                    key_length = int.from_bytes(file.read(1), byteorder="little")
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
+                    print(f"Key: {key}, Value: {value}")
                     unexpired_keys.append(key.decode())
         
         return unexpired_keys
@@ -395,7 +395,7 @@ class AsyncRequestHandler:
     def read_encoded_value(self, file: BinaryIO, value_type: bytes) -> Any:
         if value_type == b"\x00":
             # String value
-            value_length = int.from_bytes(file.read(2), byteorder="big")
+            value_length = int.from_bytes(file.read(2), byteorder="little")
             return file.read(value_length)        
         else:
             # Unknown value type
