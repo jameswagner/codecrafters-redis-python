@@ -96,9 +96,18 @@ class AsyncServer:
         await request_handler.process_request()
         
     def get_keys_array(self):
-        hash_map = self.parse_redis_file(Path(self.server.config["dir"]) / self.server.config["dbfilename"])
+        hash_map = self.parse_redis_file(Path(self.config["dir"]) / self.config["dbfilename"])
         encoded_keys = self.as_array(hash_map.keys())
         return encoded_keys
+
+    def as_array(self, data: List[str]) -> str:
+        encoded_data = []
+        encoded_data.append(f"*{len(data)}\r\n")
+        
+        for element in data:
+            encoded_data.append(f"${len(element)}\r\n{element}\r\n")
+        
+        return ''.join(encoded_data)
 
     def parse_redis_file(self, file_path: str) -> Dict[str, str]:
         hash_map = {}
@@ -251,16 +260,9 @@ class AsyncRequestHandler:
                     response.append(value)
                 else:
                     response.append("(nil)")
-            return self.as_array(response)
+            return self.server.as_array(response)
 
-    def as_array(self, data: List[str]) -> str:
-        encoded_data = []
-        encoded_data.append(f"*{len(data)}\r\n")
-        
-        for element in data:
-            encoded_data.append(f"${len(element)}\r\n{element}\r\n")
-        
-        return ''.join(encoded_data)
+
 
 
     async def handle_wait(self, command: List[str]) -> str:
