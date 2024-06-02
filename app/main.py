@@ -24,6 +24,8 @@ class AsyncServer:
     @classmethod
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None, dir: str = '', dbfilename: str = ''):
         instance = cls(host, port, replica_server, replica_port, dir, dbfilename)
+        if(dir and dbfilename):
+            instance.memory = instance.parse_redis_file(Path(dir) / dbfilename)
         instance.inner_server = await instance.start()
         
         if replica_server is not None and replica_port is not None:
@@ -323,13 +325,13 @@ class AsyncRequestHandler:
     def generate_random_string(self, length: int) -> str:
         return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
     
-    def get_keys_array(self) -> str:
-        keys = self.parse_redis_file(Path(self.server.config["dir"]) / self.server.config["dbfilename"])
-        encoded_keys = self.as_array(keys)
+    def get_keys_array(self):
+        hash_map = self.parse_redis_file(Path(self.server.config["dir"]) / self.server.config["dbfilename"])
+        encoded_keys = self.as_array(hash_map.keys())
         return encoded_keys
 
-    def parse_redis_file(self, file_path: str) -> List[str]:
-        unexpired_keys = []
+    def parse_redis_file(self, file_path: str) -> Dict[str, str]:
+        hash_map = {}
         with open(file_path, "rb") as file:
             print("File Path:", file_path)
             for line in file:
@@ -344,7 +346,7 @@ class AsyncRequestHandler:
             while True:
                 byte = file.read(1)
                 if not byte:
-                    return -1
+                    return {}
                 if byte == b"\xFE":
                     for _ in range(4):
                         print(file.read(1))
@@ -366,7 +368,7 @@ class AsyncRequestHandler:
                     value = self.read_encoded_value(file, value_type)
                     # Check if key has expired
                     if expiry_time > 0 and expiry_time < time.time():
-                        unexpired_keys.append(key.decode())
+                        key = None
                 elif field_type == b"\xFC":
                     # Key-value pair with expiry time in milliseconds
                     expiry_time = int.from_bytes(file.read(8), byteorder="big")
@@ -376,7 +378,8 @@ class AsyncRequestHandler:
                     value = self.read_encoded_value(file, value_type)
                     # Check if key has expired
                     if expiry_time > 0 and expiry_time < time.time() * 1000:
-                        unexpired_keys.append(key.decode())
+                        key = None
+                        
                 elif field_type == b"\xFF":
                     # End of RDB file
                     break
@@ -387,9 +390,9 @@ class AsyncRequestHandler:
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
                     print(f"Key length: {key_length} Key: {key}, Value: {value}")
-                    unexpired_keys.append(key.decode())
-        
-        return unexpired_keys
+                if key and value:
+                    hash_map[key.decode()] = value
+        return hash_map
 
     def read_encoded_value(self, file: BinaryIO, value_type: bytes) -> Any:
         if value_type == b"\x00":
