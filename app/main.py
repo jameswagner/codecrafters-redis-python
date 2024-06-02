@@ -139,15 +139,15 @@ class AsyncServer:
                 expiry_time = 0
                 if field_type == b"\xFE":
                     # Database selector field
-                    db_number = int.from_bytes(file.read(1), byteorder="big")
+                    db_number = int.from_bytes(file.read(1), byteorder="little")
                     # Skip resizedb field
                 elif field_type == b"\xfb":
                     file.read(2)
                 elif field_type == b"\xFD":
                     # Key-value pair with expiry time in seconds
-                    expiry_time = int.from_bytes(file.read(4), byteorder="big")
+                    expiry_time = int.from_bytes(file.read(4), byteorder="little")
                     value_type = file.read(1)
-                    key_length = int.from_bytes(file.read(1), byteorder="big")
+                    key_length = int.from_bytes(file.read(1), byteorder="little")
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
                     # Check if key has expired
@@ -155,9 +155,9 @@ class AsyncServer:
                         key = None
                 elif field_type == b"\xFC":
                     # Key-value pair with expiry time in milliseconds
-                    expiry_time = int.from_bytes(file.read(8), byteorder="big")
+                    expiry_time = int.from_bytes(file.read(8), byteorder="little")
                     value_type = file.read(1)
-                    key_length = int.from_bytes(file.read(1), byteorder="big")
+                    key_length = int.from_bytes(file.read(1), byteorder="little")
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
                     # Check if key has expired
