@@ -344,12 +344,10 @@ class AsyncRequestHandler:
             while True:
                 field_type = file.peek(1).upper()
                 if field_type == b"\xFE":
-                    # Database selector field
-                    db_number = int.from_bytes(file.read(1), byteorder="big")
-                    # Skip resizedb field
-                    file.seek(9, 1)
+                    for _ in range(5):
+                        r=file.read(1)
+                        print(r)
                     break
-                file.read(1)
             while True:
                 field_type = file.read(1)
                 if field_type == b"\xFE":
