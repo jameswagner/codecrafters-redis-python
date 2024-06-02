@@ -163,6 +163,7 @@ class AsyncServer:
                     # Check if key has expired
                     if expiry_time > 0 and expiry_time < time.time() * 1000:
                         key = None
+                    expiry_time = expiry_time / 1000
                         
                 elif field_type == b"\xFF":
                     # End of RDB file
