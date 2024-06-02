@@ -343,6 +343,7 @@ class AsyncRequestHandler:
             print(f"Magic String: {magic_string}, RDB Version: {rdb_version}")
             while True:
                 field_type = file.peek(1).upper()
+                print(f"Field Type: {field_type}")
                 if field_type == b"\xFE":
                     for _ in range(5):
                         r=file.read(1)
