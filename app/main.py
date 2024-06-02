@@ -394,7 +394,7 @@ class AsyncRequestHandler:
     def read_encoded_value(self, file: BinaryIO, value_type: bytes) -> Any:
         if value_type == b"\x00":
             # String value
-            value_length = int.from_bytes(file.read(2), byteorder="little")
+            value_length = int.from_bytes(file.read(1), byteorder="little")
             return file.read(value_length)        
         else:
             # Unknown value type
