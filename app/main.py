@@ -156,6 +156,7 @@ class AsyncServer:
                 elif field_type == b"\xFC":
                     # Key-value pair with expiry time in milliseconds
                     expiry_time = int.from_bytes(file.read(8), byteorder="little")
+                    
                     value_type = file.read(1)
                     key_length = int.from_bytes(file.read(1), byteorder="little")
                     key = file.read(key_length)
@@ -164,6 +165,7 @@ class AsyncServer:
                     if expiry_time > 0 and expiry_time < time.time() * 1000:
                         key = None
                     expiry_time = expiry_time / 1000
+                    print("got expiry time", expiry_time)
                         
                 elif field_type == b"\xFF":
                     # End of RDB file
