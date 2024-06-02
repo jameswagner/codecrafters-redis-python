@@ -111,11 +111,14 @@ class AsyncServer:
 
     def parse_redis_file(self, file_path: str) -> Dict[str, str]:
         hash_map = {}
-        with open(file_path, "rb") as file:
-            print("File Path:", file_path)
-            for line in file:
-                print(line)
-            #return unexpired_keys
+        try:
+            with open(file_path, "rb") as file:
+                print("File Path:", file_path)
+                for line in file:
+                    print(line)
+        except FileNotFoundError:
+            return hash_map
+
         
         with open(file_path, "rb") as file:
             magic_string = file.read(5)
