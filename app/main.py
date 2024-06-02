@@ -349,6 +349,7 @@ class AsyncRequestHandler:
                         r=file.read(1)
                         print(r)
                     break
+                file.seek(1)
             while True:
                 field_type = file.read(1)
                 if field_type == b"\xFE":
