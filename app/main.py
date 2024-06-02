@@ -4,7 +4,7 @@ import base64
 import logging
 from pathlib import Path
 import time
-from typing import Any, BinaryIO, List
+from typing import Any, BinaryIO, List, Dict
 import random
 import string
 
