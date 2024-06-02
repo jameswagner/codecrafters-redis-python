@@ -96,7 +96,7 @@ class AsyncServer:
         await request_handler.process_request()
         
     def get_keys_array(self):
-        hash_map = self.parse_redis_file(Path(self.config["dir"]) / self.config["dbfilename"])
+        hash_map, _ = self.parse_redis_file(Path(self.config["dir"]) / self.config["dbfilename"])
         encoded_keys = self.as_array(hash_map.keys())
         return encoded_keys
 
