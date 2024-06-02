@@ -118,7 +118,7 @@ class AsyncServer:
                 for line in file:
                     print(line)
         except FileNotFoundError:
-            return hash_map
+            return hash_map, expiry_times
 
         
         with open(file_path, "rb") as file:
