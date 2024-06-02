@@ -346,7 +346,7 @@ class AsyncRequestHandler:
                 if not byte:
                     return -1
                 if byte == b"\xFE":
-                    for _ in range(5):
+                    for _ in range(4):
                         print(file.read(1))
                     break
             while True:
@@ -386,7 +386,7 @@ class AsyncRequestHandler:
                     key_length = int.from_bytes(file.read(1), byteorder="little")
                     key = file.read(key_length)
                     value = self.read_encoded_value(file, value_type)
-                    print(f"Key: {key}, Value: {value}")
+                    print(f"Key length: {key_length} Key: {key}, Value: {value}")
                     unexpired_keys.append(key.decode())
         
         return unexpired_keys
