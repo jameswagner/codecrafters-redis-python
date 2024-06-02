@@ -161,7 +161,7 @@ class AsyncServer:
                     value = self.read_encoded_value(file, value_type)
                     print(f"Key length: {key_length} Key: {key}, Value: {value}")
                 if key and value:
-                    hash_map[key.decode()] = value
+                    hash_map[key.decode()] = value.decode()
         print("HASH MAP:", hash_map)
         return hash_map
 
