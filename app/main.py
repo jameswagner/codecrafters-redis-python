@@ -25,7 +25,7 @@ class AsyncServer:
     async def create(cls, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None, dir: str = '', dbfilename: str = ''):
         instance = cls(host, port, replica_server, replica_port, dir, dbfilename)
         if(dir and dbfilename):
-            instance.memory = instance.parse_redis_file(Path(dir) / dbfilename)
+            instance.memory, instance.expiration = instance.parse_redis_file(Path(dir) / dbfilename)
         instance.inner_server = await instance.start()
         
         if replica_server is not None and replica_port is not None:
@@ -109,8 +109,9 @@ class AsyncServer:
         
         return ''.join(encoded_data)
 
-    def parse_redis_file(self, file_path: str) -> Dict[str, str]:
+    def parse_redis_file(self, file_path: str) -> List[Dict[str, str]]:
         hash_map = {}
+        expiry_times = {}
         try:
             with open(file_path, "rb") as file:
                 print("File Path:", file_path)
@@ -135,6 +136,7 @@ class AsyncServer:
                     break
             while True:
                 field_type = file.read(1)
+                expiry_time = 0
                 if field_type == b"\xFE":
                     # Database selector field
                     db_number = int.from_bytes(file.read(1), byteorder="big")
@@ -174,8 +176,11 @@ class AsyncServer:
                     print(f"Key length: {key_length} Key: {key}, Value: {value}")
                 if key and value:
                     hash_map[key.decode()] = value.decode()
+                if key and expiry_time:
+                    expiry_times[key.decode()] = expiry_time
         print("HASH MAP:", hash_map)
-        return hash_map
+        print("EXPIRY TIMES:", expiry_times)
+        return hash_map, expiry_times
 
     def read_encoded_value(self, file: BinaryIO, value_type: bytes) -> Any:
         if value_type == b"\x00":
