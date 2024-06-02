@@ -342,14 +342,13 @@ class AsyncRequestHandler:
             # Check magic string and rdb version
             print(f"Magic String: {magic_string}, RDB Version: {rdb_version}")
             while True:
-                field_type = file.peek(1).upper()
-                print(f"Field Type: {field_type}")
-                if field_type == b"\xFE":
+                byte = file.read(1)
+                if not byte:
+                    return -1
+                if byte == b"\xFE":
                     for _ in range(5):
-                        r=file.read(1)
-                        print(r)
+                        print(file.read(1))
                     break
-                file.seek(1)
             while True:
                 field_type = file.read(1)
                 if field_type == b"\xFE":
