@@ -275,7 +275,7 @@ class AsyncRequestHandler:
         key = command[1]
         if key in self.memory and (not self.expiration.get(key) or self.expiration[key] >= time.time()):
             return "+string\r\n"
-        elif key in self.streamstore:
+        elif key in self.server.streamstore:
             return "+stream\r\n"
         else:
             return "+none\r\n"
