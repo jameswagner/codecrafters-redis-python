@@ -289,7 +289,7 @@ class AsyncRequestHandler:
         return ""
 
     
-    def generate_stream_id(self, stream_key: str, stream_id: int) -> str:
+    def generate_stream_id(self, stream_key: str, stream_id: str) -> str:
         parts = stream_id.split("-")
         if parts[0].isdigit() and parts[1].isdigit():
             return stream_id
@@ -307,7 +307,7 @@ class AsyncRequestHandler:
             else:
                 sequence_number = 1 if parts[0] == 0 else 0
             return f"{parts[0]}-{sequence_number}"
-        if parts[0] == "*" and parts[1] == "*":
+        if stream_id == "*" or (parts[0] == "*" and parts[1] == "*"):
             current_time = int(time.time() * 1000)
             sequence_number = 0 
             if stream_key in self.server.streamstore:
