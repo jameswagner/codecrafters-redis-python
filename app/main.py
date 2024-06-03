@@ -16,6 +16,7 @@ class AsyncServer:
         self.replica_port = replica_port
         self.memory = {}
         self.expiration = {}
+        self.streamstore = {}
         self.writers = []
         self.inner_server = None
         self.numacks = 0
@@ -243,6 +244,8 @@ class AsyncRequestHandler:
                 response = await self.handle_keys(cmd)
             elif cmd_name == "TYPE" and len(cmd) > 1:
                 response = await self.handle_type(cmd)
+            elif cmd_name == "XADD" and len(cmd) > 3:
+                response = await self.handle_xadd(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -262,10 +265,18 @@ class AsyncRequestHandler:
         keys = self.server.get_keys_array()
         return keys
 
+    async def handle_xadd(self, command: List[str]) -> str:
+        stream_key = command[1]
+        stream_id = command[2]
+        self.streamstore[stream_key] = command[3:]
+        return stream_id
+    
     async def handle_type(self, command: List[str]) -> str:
         key = command[1]
         if key in self.memory and (not self.expiration.get(key) or self.expiration[key] >= time.time()):
             return "+string\r\n"
+        elif key in self.streamstore:
+            return "+stream\r\n"
         else:
             return "+none\r\n"
 
@@ -281,9 +292,6 @@ class AsyncRequestHandler:
                 else:
                     response.append("(nil)")
             return self.server.as_array(response)
-
-
-
 
     async def handle_wait(self, command: List[str]) -> str:
         max_wait_ms = int(command[2])
