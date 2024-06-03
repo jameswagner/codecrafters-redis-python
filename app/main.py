@@ -294,6 +294,7 @@ class AsyncRequestHandler:
         if parts[0].isdigit() and parts[1].isdigit():
             return stream_id
         if parts[0].isdigit() and parts[1] == "*":
+            parts[0] = int(parts[0])
             if stream_key in self.server.streamstore:
                 last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
                 last_entry_sequence = int(last_entry_id.split("-")[1])
