@@ -268,7 +268,7 @@ class AsyncRequestHandler:
     async def handle_xadd(self, command: List[str]) -> str:
         stream_key = command[1]
         stream_id = command[2]
-        self.streamstore[stream_key] = command[3:]
+        self.server.streamstore[stream_key] = command[3:]
         return stream_id
     
     async def handle_type(self, command: List[str]) -> str:
