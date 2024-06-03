@@ -309,9 +309,7 @@ class AsyncRequestHandler:
     async def handle_xadd(self, command: List[str]) -> str:
         stream_key = command[1]
         stream_id = command[2]
-        if stream_key != "*" and stream_id == "*":
-            sequence_number = self.generate_sequence_number(stream_key)
-            stream_id = self.generate_stream_id(stream_key, sequence_number)
+        stream_id = self.generate_stream_id(stream_key, stream_id)
         err_message = self.validate_stream_id(stream_key, stream_id)
         if err_message:
             return err_message
