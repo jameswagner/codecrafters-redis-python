@@ -269,7 +269,7 @@ class AsyncRequestHandler:
         stream_key = command[1]
         stream_id = command[2]
         self.server.streamstore[stream_key] = command[3:]
-        return stream_id
+        return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
     async def handle_type(self, command: List[str]) -> str:
         key = command[1]
