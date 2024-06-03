@@ -274,7 +274,7 @@ class AsyncRequestHandler:
         if(len(self.server.streamstore) < 1):
             return ""
         
-        last_entry_id = self.server.streamstore[-1][0]
+        last_entry_id = self.server.streamstore[-1]
         last_entry_milliseconds = int(last_entry_id.split("-")[0])
         last_entry_sequence = int(last_entry_id.split("-")[1])
 
