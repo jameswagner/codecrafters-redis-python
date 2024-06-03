@@ -264,11 +264,35 @@ class AsyncRequestHandler:
     async def handle_keys(self, command: List[str]) -> str:
         keys = self.server.get_keys_array()
         return keys
+    
+    
+    def validate_stream_id(self, stream_id: str) -> string:
+
+        last_entry_id = self.server.streamstore[-1][0]
+        last_entry_milliseconds = int(last_entry_id.split("-")[0])
+        last_entry_sequence = int(last_entry_id.split("-")[1])
+
+        current_entry_milliseconds = int(stream_id.split("-")[0])
+        current_entry_sequence = int(stream_id.split("-")[1])
+        
+        if(stream_id < "0-0"):
+            return "-ERR The ID specified in XADD must be greater than 0-0\r\n"
+        
+        err_string = "-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"
+        if current_entry_milliseconds < last_entry_milliseconds:
+            return err_string
+        elif current_entry_milliseconds == last_entry_milliseconds and current_entry_sequence <= last_entry_sequence:
+            return err_string
+        return ""
 
     async def handle_xadd(self, command: List[str]) -> str:
         stream_key = command[1]
         stream_id = command[2]
-        self.server.streamstore[stream_key] = command[3:]
+        
+        if not self.validate_stream_id(stream_id):
+            return "-ERR Invalid stream ID\r\n"
+
+        self.server.streamstore[stream_id] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
     async def handle_type(self, command: List[str]) -> str:
