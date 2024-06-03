@@ -294,6 +294,8 @@ class AsyncRequestHandler:
         err_message = self.validate_stream_id(stream_key, stream_id)
         if err_message:
             return err_message
+        if stream_key not in self.server.streamstore:
+            self.server.streamstore[stream_key] = {}
 
         self.server.streamstore[stream_key][stream_id] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
