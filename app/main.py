@@ -268,7 +268,7 @@ class AsyncRequestHandler:
     
     def validate_stream_id(self, stream_id: str) -> string:
         
-        if(stream_id < "0-0"):
+        if(stream_id <= "0-0"):
             return "-ERR The ID specified in XADD must be greater than 0-0\r\n"
         
         if(len(self.server.streamstore) < 1):
