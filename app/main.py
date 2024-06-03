@@ -307,6 +307,17 @@ class AsyncRequestHandler:
             else:
                 sequence_number = 1 if parts[0] == 0 else 0
             return f"{parts[0]}-{sequence_number}"
+        if parts[0] == "*" and parts[1] == "*":
+            current_time = int(time.time() * 1000)
+            sequence_number = 0 
+            if stream_key in self.server.streamstore:
+                last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
+                last_entry_number = int(last_entry_id.split("-")[0])
+                last_entry_sequence = int(last_entry_id.split("-")[1])
+                if(last_entry_number == current_time):
+                    sequence_number = last_entry_sequence + 1
+            stream_id = f"{current_time}-{sequence_number}"
+            return stream_id
         return ""
 
     async def handle_xadd(self, command: List[str]) -> str:
