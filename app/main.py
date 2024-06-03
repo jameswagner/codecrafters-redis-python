@@ -297,8 +297,8 @@ class AsyncRequestHandler:
             parts[0] = int(parts[0])
             if stream_key in self.server.streamstore:
                 last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
-                last_entry_sequence = int(last_entry_id.split("-")[1])
-                print(f"last entry sequence {last_entry_sequence} parts[0] {parts[0]}")
+                last_entry_sequence = int(last_entry_id.split("-")[0])
+                //print(f"last entry sequence {last_entry_sequence} parts[0] {parts[0]}")
                 if(last_entry_sequence < parts[0]):
                     sequence_number = 0
                 else:
