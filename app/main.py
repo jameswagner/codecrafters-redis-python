@@ -288,9 +288,30 @@ class AsyncRequestHandler:
             return err_string
         return ""
 
+    
+    def generate_stream_id(self, stream_key: str, stream_id: int) -> str:
+        parts = stream_id.split("-")
+        if parts[0].isdigit() and parts[1].isdigit():
+            return stream_id
+        if parts[0].isdigit() and parts[1] == "*":
+            if stream_key in self.server.streamstore:
+                last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
+                last_entry_sequence = int(last_entry_id.split("-")[1])
+                if(last_entry_sequence < parts[0]):
+                    sequence_number = 0
+                else:
+                    sequence_number = last_entry_sequence + 1
+            else:
+                sequence_number = 1 if parts[0] == "0" else 0
+            return f"{parts[0]}-{sequence_number}"
+        return ""
+
     async def handle_xadd(self, command: List[str]) -> str:
         stream_key = command[1]
         stream_id = command[2]
+        if stream_key != "*" and stream_id == "*":
+            sequence_number = self.generate_sequence_number(stream_key)
+            stream_id = self.generate_stream_id(stream_key, sequence_number)
         err_message = self.validate_stream_id(stream_key, stream_id)
         if err_message:
             return err_message
