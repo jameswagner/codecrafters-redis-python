@@ -267,16 +267,19 @@ class AsyncRequestHandler:
     
     
     def validate_stream_id(self, stream_id: str) -> string:
-
+        
+        if(stream_id < "0-0"):
+            return "-ERR The ID specified in XADD must be greater than 0-0\r\n"
+        
+        if(len(self.server.streamstore) < 1):
+            return ""
+        
         last_entry_id = self.server.streamstore[-1][0]
         last_entry_milliseconds = int(last_entry_id.split("-")[0])
         last_entry_sequence = int(last_entry_id.split("-")[1])
 
         current_entry_milliseconds = int(stream_id.split("-")[0])
         current_entry_sequence = int(stream_id.split("-")[1])
-        
-        if(stream_id < "0-0"):
-            return "-ERR The ID specified in XADD must be greater than 0-0\r\n"
         
         err_string = "-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"
         if current_entry_milliseconds < last_entry_milliseconds:
