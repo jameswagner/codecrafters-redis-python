@@ -303,7 +303,7 @@ class AsyncRequestHandler:
                 else:
                     sequence_number = last_entry_sequence + 1
             else:
-                sequence_number = 1 if parts[0] == "0" else 0
+                sequence_number = 1 if parts[0] == 0 else 0
             return f"{parts[0]}-{sequence_number}"
         return ""
 
