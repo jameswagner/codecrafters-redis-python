@@ -291,9 +291,9 @@ class AsyncRequestHandler:
     async def handle_xadd(self, command: List[str]) -> str:
         stream_key = command[1]
         stream_id = command[2]
-        
-        if not self.validate_stream_id(stream_id):
-            return "-ERR Invalid stream ID\r\n"
+        err_message = self.validate_stream_id(stream_id)
+        if err_message:
+            return err_message
 
         self.server.streamstore[stream_id] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
