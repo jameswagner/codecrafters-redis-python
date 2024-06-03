@@ -241,6 +241,8 @@ class AsyncRequestHandler:
                 response = await self.handle_config_get(cmd)
             elif cmd_name == "KEYS":
                 response = await self.handle_keys(cmd)
+            elif cmd_name == "TYPE" and len(cmd) > 1:
+                response = await self.handle_type(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -259,6 +261,13 @@ class AsyncRequestHandler:
     async def handle_keys(self, command: List[str]) -> str:
         keys = self.server.get_keys_array()
         return keys
+
+    async def handle_type(self, command: List[str]) -> str:
+        key = command[1]
+        if key in self.memory and (not self.expiration.get(key) or self.expiration[key] >= time.time()):
+            return "+string\r\n"
+        else:
+            return "+none\r\n"
 
     async def handle_config_get(self, command: List[str]) -> str:
         if len(command) > 1:
