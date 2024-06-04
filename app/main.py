@@ -332,7 +332,7 @@ class AsyncRequestHandler:
         if stream_id_parts[0] not in self.server.streamstore[stream_key]:
             self.server.streamstore[stream_key][stream_id_parts[0]] = {}
 
-        self.server.streamstore[stream_key][stream_id_parts[0]][stream_id_parts[1]] = command[3:]
+        self.server.streamstore[stream_key][int(stream_id_parts[0])][int(stream_id_parts[1])] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
     async def handle_xrange(self, command: List[str]) -> str:
