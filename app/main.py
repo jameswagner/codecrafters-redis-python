@@ -328,6 +328,8 @@ class AsyncRequestHandler:
         if stream_key not in self.server.streamstore:
             self.server.streamstore[stream_key] = {}
         stream_id_parts = stream_id.split("-")
+        if stream_id_parts[0] not in self.server.streamstore[stream_key]:
+            self.server.streamstore[stream_key][stream_id_parts[0]] = {}
 
         self.server.streamstore[stream_key][stream_id_parts[0]][stream_id_parts[1]] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
