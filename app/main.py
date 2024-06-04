@@ -277,8 +277,8 @@ class AsyncRequestHandler:
         if stream_key not in self.server.streamstore:
             return ""
         
-        last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
-        last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
+        last_entry_number = int(list(self.server.streamstore[stream_key].keys())[-1])
+        last_entry_sequence = int(list(self.server.streamstore[stream_key][last_entry_number].keys())[-1])
 
         current_entry_number = int(stream_id.split("-")[0])
         current_entry_sequence = int(stream_id.split("-")[1])
