@@ -278,6 +278,7 @@ class AsyncRequestHandler:
             return ""
         
         last_entry_number = int(list(self.server.streamstore[stream_key].keys())[-1])
+        print(f"Last entry number: {last_entry_number}")
         last_entry_sequence = int(list(self.server.streamstore[stream_key][last_entry_number].keys())[-1])
 
         current_entry_number = int(stream_id.split("-")[0])
