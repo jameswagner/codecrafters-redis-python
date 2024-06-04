@@ -348,9 +348,9 @@ class AsyncRequestHandler:
         streamstore = self.server.streamstore[stream_key]
         keys = list(streamstore.keys())
         
-        lower_outer, lower_inner = lower.split("-")
-        upper_outer, upper_inner = upper.split("-")
-
+        lower_outer, lower_inner = int(lower.split("-")[0]), int(lower.split("-")[1])
+        upper_outer, upper_inner = int(upper.split("-")[0]), int(upper.split("-")[1])
+        
         start_index, end_index = self.find_outer_indices(keys, lower_outer, upper_outer)
         print(f"Start index: {start_index}, End index: {end_index}")
         if start_index == -1 or end_index == -1 or start_index >= len(keys) or end_index < 0 or start_index > end_index:
