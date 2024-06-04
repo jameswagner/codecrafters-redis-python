@@ -4,9 +4,10 @@ import base64
 import logging
 from pathlib import Path
 import time
-from typing import Any, BinaryIO, List, Dict
+from typing import Any, BinaryIO, List, Dict, Tuple
 import random
 import string
+import bisect
 
 class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None, dir: str = '', dbfilename: str = ''):
@@ -110,7 +111,7 @@ class AsyncServer:
         
         return ''.join(encoded_data)
 
-    def parse_redis_file(self, file_path: str) -> List[Dict[str, str]]:
+    def parse_redis_file(self, file_path: str) -> Tuple[List[Dict[str, str]]]:
         hash_map = {}
         expiry_times = {}
         try:
@@ -246,6 +247,8 @@ class AsyncRequestHandler:
                 response = await self.handle_type(cmd)
             elif cmd_name == "XADD" and len(cmd) > 3:
                 response = await self.handle_xadd(cmd)
+            elif cmd_name == "XRANGE" and len(cmd) > 3:
+                response = await self.handle_xrange(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -274,20 +277,18 @@ class AsyncRequestHandler:
         if stream_key not in self.server.streamstore:
             return ""
         
-        last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
-        last_entry_milliseconds = int(last_entry_id.split("-")[0])
-        last_entry_sequence = int(last_entry_id.split("-")[1])
+        last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
+        last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
 
-        current_entry_milliseconds = int(stream_id.split("-")[0])
+        current_entry_number = int(stream_id.split("-")[0])
         current_entry_sequence = int(stream_id.split("-")[1])
         
         err_string = "-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"
-        if current_entry_milliseconds < last_entry_milliseconds:
+        if current_entry_number < last_entry_number:
             return err_string
-        elif current_entry_milliseconds == last_entry_milliseconds and current_entry_sequence <= last_entry_sequence:
+        elif current_entry_number == last_entry_number and current_entry_sequence <= last_entry_sequence:
             return err_string
         return ""
-
     
     def generate_stream_id(self, stream_key: str, stream_id: str) -> str:
         parts = stream_id.split("-")
@@ -296,10 +297,8 @@ class AsyncRequestHandler:
         if parts[0].isdigit() and parts[1] == "*":
             parts[0] = int(parts[0])
             if stream_key in self.server.streamstore:
-                last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
-                last_entry_number = int(last_entry_id.split("-")[0])
-                last_entry_sequence = int(last_entry_id.split("-")[1])
-                #print(f"last entry sequence {last_entry_sequence} parts[0] {parts[0]}")
+                last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
+                last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
                 if(last_entry_number < parts[0]):
                     sequence_number = 0
                 else:
@@ -311,9 +310,8 @@ class AsyncRequestHandler:
             current_time = int(time.time() * 1000)
             sequence_number = 0 
             if stream_key in self.server.streamstore:
-                last_entry_id = list(self.server.streamstore[stream_key].keys())[-1]
-                last_entry_number = int(last_entry_id.split("-")[0])
-                last_entry_sequence = int(last_entry_id.split("-")[1])
+                last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
+                last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
                 if(last_entry_number == current_time):
                     sequence_number = last_entry_sequence + 1
             stream_id = f"{current_time}-{sequence_number}"
@@ -329,9 +327,90 @@ class AsyncRequestHandler:
             return err_message
         if stream_key not in self.server.streamstore:
             self.server.streamstore[stream_key] = {}
+        stream_id_parts = stream_id.split("-")
 
-        self.server.streamstore[stream_key][stream_id] = command[3:]
+        self.server.streamstore[stream_key][stream_id_parts[0]][stream_id_parts[1]] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
+    
+    async def handle_xrange(self, command: List[str]) -> str:
+        stream_key = command[1]
+        lower, upper = command[2], command[3]
+        none_string = "+none\r\n"
+        if stream_key not in self.server.streamstore:
+            print(f"Stream key '{stream_key}' not found in streamstore")
+            return none_string
+
+        streamstore = self.server.streamstore[stream_key]
+        keys = list(streamstore.keys())
+        
+        lower_outer, lower_inner = lower.split("-")
+        upper_outer, upper_inner = upper.split("-")
+
+        start_index, end_index = self.find_outer_indices(keys, lower_outer, upper_outer)
+        print(f"Start index: {start_index}, End index: {end_index}")
+        if start_index == -1 or end_index == -1 or start_index >= len(keys) or end_index < 0 or start_index > end_index:
+            print("Invalid range indices")
+            return none_string
+        
+        streamstore_start_index = self.find_inner_start_index(streamstore, keys, start_index, lower_outer, lower_inner)
+        streamstore_end_index = self.find_inner_end_index(streamstore, keys, end_index, upper_outer, upper_inner)
+        print(f"Streamstore start index: {streamstore_start_index}, Streamstore end index: {streamstore_end_index}")
+        if streamstore_start_index == -1 or streamstore_end_index == -1:
+            print("Invalid inner indices")
+            return none_string
+
+        elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
+        print(f"Extracted elements: {elements}")
+        return self.server.as_array(elements)
+
+    def find_outer_indices(self, keys: List[str], lower_outer: str, upper_outer: str) -> Tuple[int, int]:
+        start_index = bisect.bisect_left(keys, lower_outer)
+        end_index = bisect.bisect_right(keys, upper_outer) - 1
+        if start_index >= len(keys) or end_index < 0:
+            return -1, -1
+        return start_index, end_index
+
+    def find_inner_start_index(self, streamstore: Dict[str, Dict[str, str]], keys: List[str], start_index: int, lower_outer: str, lower_inner: str) -> int:
+        if keys[start_index] == lower_outer:
+            streamstore_start_index = bisect.bisect_left(list(streamstore[keys[start_index]].keys()), lower_inner)
+            if streamstore_start_index == len(streamstore[keys[start_index]]):
+                start_index += 1
+                if start_index >= len(keys):
+                    return -1
+                streamstore_start_index = 0
+        else:
+            streamstore_start_index = 0
+        return streamstore_start_index
+
+    def find_inner_end_index(self, streamstore: Dict[str, Dict[str, str]], keys: List[str], end_index: int, upper_outer: str, upper_inner: str) -> int:
+        if keys[end_index] == upper_outer:
+            streamstore_end_index = bisect.bisect_right(list(streamstore[keys[end_index]].keys()), upper_inner) - 1
+            if streamstore_end_index == -1:
+                end_index -= 1
+                if end_index < 0:
+                    return -1
+                streamstore_end_index = len(streamstore[keys[end_index]]) - 1
+        else:
+            streamstore_end_index = len(streamstore[keys[end_index]]) - 1
+        return streamstore_end_index
+
+    def extract_elements(self, streamstore: Dict[str, Dict[str, str]], keys: List[str], start_index: int, end_index: int, streamstore_start_index: int, streamstore_end_index: int) -> List[str]:
+        elements = []
+        if start_index == end_index:
+            current_key = keys[start_index]
+            current_elements = streamstore[current_key]
+            current_elements = dict(list(current_elements.items())[streamstore_start_index:streamstore_end_index+1])
+            elements.extend(current_elements.values())
+        else:
+            for i in range(start_index, end_index + 1):
+                current_key = keys[i]
+                current_elements = streamstore[current_key]
+                if i == start_index:
+                    current_elements = dict(list(current_elements.items())[streamstore_start_index:])
+                elif i == end_index:
+                    current_elements = dict(list(current_elements.items())[:streamstore_end_index+1])
+                elements.extend(current_elements.values())
+        return elements
     
     async def handle_type(self, command: List[str]) -> str:
         key = command[1]
