@@ -407,7 +407,7 @@ class AsyncRequestHandler:
             streamstore_end_index = len(streamstore[keys[end_index]]) - 1
         return streamstore_end_index
 
-    def extract_elements(self, streamstore: Dict[str, Dict[str, str]], keys: List[str], start_index: int, end_index: int, streamstore_start_index: int, streamstore_end_index: int) -> List[str]:
+    def extract_elements(self, streamstore: Dict[str, List[str]], keys: List[str], start_index: int, end_index: int, streamstore_start_index: int, streamstore_end_index: int) -> List[str]:
         elements = []
         print(f"streamstore: {streamstore}, keys: {keys}, start_index: {start_index}, end_index: {end_index}, streamstore_start_index: {streamstore_start_index}, streamstore_end_index: {streamstore_end_index}")
         if start_index == end_index:
