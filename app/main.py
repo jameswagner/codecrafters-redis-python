@@ -367,6 +367,14 @@ class AsyncRequestHandler:
         elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
         print(f"Extracted elements: {elements}")
         return self.server.as_array(elements)
+    
+    def generate_redis_array(self, string: str, lst: List[str]) -> str:
+        redis_array = []
+        redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
+        redis_array.append(f"*{len(lst)}\r\n")
+        for element in lst:
+            redis_array.append(f"${len(element)}\r\n{element}\r\n")
+        return ''.join(redis_array)
 
     def find_outer_indices(self, keys: List[str], lower_outer: str, upper_outer: str) -> Tuple[int, int]:
         start_index = bisect.bisect_left(keys, lower_outer)
@@ -401,6 +409,7 @@ class AsyncRequestHandler:
 
     def extract_elements(self, streamstore: Dict[str, Dict[str, str]], keys: List[str], start_index: int, end_index: int, streamstore_start_index: int, streamstore_end_index: int) -> List[str]:
         elements = []
+        print(f"streamstore: {streamstore}, keys: {keys}, start_index: {start_index}, end_index: {end_index}, streamstore_start_index: {streamstore_start_index}, streamstore_end_index: {streamstore_end_index}")
         if start_index == end_index:
             current_key = keys[start_index]
             current_elements = streamstore[current_key]
