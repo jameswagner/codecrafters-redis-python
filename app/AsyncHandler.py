@@ -41,36 +41,35 @@ class AsyncRequestHandler:
         for index, cmd in enumerate(commands):
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
             if cmd_name == "PING":
-                response = await self.handle_ping()
+                response = await self.PingCommand().execute(self, cmd)
             elif cmd_name == "ECHO" and len(cmd) > 1:
-                response = await self.handle_echo(cmd)
+                response = await self.EchoCommand().execute(self, cmd)
             elif cmd_name == "SET" and len(cmd) > 2:
-                response = await self.handle_set(cmd)
+                response = await self.SetCommand().execute(self, cmd)
             elif cmd_name == "GET" and len(cmd) > 1:
-                response = await self.handle_get(cmd)
+                response = await self.GetCommand().execute(self, cmd)
             elif cmd_name == "INFO" and len(cmd) > 1:
-                response = await self.handle_info(cmd)
+                response = await self.InfoCommand().execute(self, cmd)
             elif cmd_name == "REPLCONF":
-                response = await self.handle_replconf(cmd, self.writer)
+                response = await self.ReplConfCommand().execute(self, cmd, self.writer)
             elif cmd_name == "PSYNC":
-                response = await self.handle_psync(cmd)
+                response = await self.PSyncCommand().execute(self, cmd)
             elif cmd_name == "WAIT" and len(cmd) > 2:
-                response = await self.handle_wait(cmd)
+                response = await self.WaitCommand().execute(self, cmd)
             elif cmd_name == "CONFIG" and len(cmd) > 1:
-                response = await self.handle_config_get(cmd)
+                response = await self.ConfigCommand().execute(self, cmd)
             elif cmd_name == "KEYS":
-                keys_command = self.KeysCommand()
-                response = await keys_command.execute(self, cmd)
+                response = await self.KeysCommand().execute(self, cmd)
             elif cmd_name == "TYPE" and len(cmd) > 1:
-                response = await self.handle_type(cmd)
+                response = await self.TypeCommand().execute(self, cmd)
             elif cmd_name == "XADD" and len(cmd) > 3:
-                response = await self.handle_xadd(cmd)
+                response = await self.XAddCommand().execute(self, cmd)
             elif cmd_name == "XRANGE" and len(cmd) > 3:
-                response = await self.handle_xrange(cmd)
+                response = await self.XRangeCommand().execute(self, cmd)
             elif cmd_name == "XREAD" and len(cmd) > 2:
-                response = await self.handle_xread(cmd)
+                response = await self.XReadCommand().execute(self, cmd)
             else:
-                response = await self.handle_unknown()
+                response = await self.UnknownCommand().execute(self, cmd)
 
             if self.replica_server is not None and self.writer.get_extra_info("peername")[1] == self.replica_port:
                 if response.startswith("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK"):
@@ -95,6 +94,201 @@ class AsyncRequestHandler:
             keys = handler.server.get_keys_array()
             return keys
 
+    class TypeCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            key = command[1]
+            if key in self.memory and (not self.expiration.get(key) or self.expiration[key] >= time.time()):
+                return "+string\r\n"
+            elif key in self.server.streamstore:
+                return "+stream\r\n"
+            else:
+                return "+none\r\n"
+
+    class ConfigCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            if len(command) > 1:
+                config_params = command[2:]
+                response = []
+                for param in config_params:
+                    response.append(param)
+                    if param in self.server.config:
+                        value = self.server.config[param]
+                        response.append(value)
+                    else:
+                        response.append("(nil)")
+                return handler.server.as_array(response)
+
+    class WaitCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            max_wait_ms = int(command[2])
+            num_replicas = int(command[1])
+            for writer in handler.server.writers:
+                writer.write(b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n")
+                await writer.drain()
+            
+            start_time = time.time()
+            while handler.server.numacks < num_replicas and (time.time() - start_time) < (max_wait_ms / 1000):
+                print(f"NUMACKS: {handler.server.numacks} num_replicas: {num_replicas} max_wait_ms: {max_wait_ms} time: {time.time()} start_time: {start_time}")
+                await asyncio.sleep(0.1)
+            print("SENDING BACK", handler.server.numacks)
+            return f":{handler.server.numacks}\r\n"
+
+    class PingCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            return "+PONG\r\n"
+
+    class ReplConfCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str], writer: asyncio.StreamWriter) -> str:
+            if len(command) > 2 and command[1] == "listening-port":
+                handler.server.writers.append(writer)
+            elif len(command) > 2 and command[1] == "GETACK":
+                response = f"*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n${len(str(handler.offset))}\r\n{handler.offset}\r\n"
+                print(f"REPLCONF ACK: {response}")
+                return response
+            elif len(command) > 2 and command[1] == "ACK":
+                print("Incrementing num acks")
+                handler.server.numacks += 1
+                return ""
+            return "+OK\r\n"
+
+    class PSyncCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            response = "+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"
+            rdb_hex = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
+            binary_data = bytes.fromhex(rdb_hex)
+            header = f"${len(binary_data)}\r\n"
+            handler.writer.write(response.encode())
+            handler.writer.write(header.encode())
+            handler.writer.write(binary_data)
+            await handler.writer.drain()
+            handler.server.numacks += 1
+            return ""
+
+    class InfoCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            if command[1].lower() == "replication":
+                if handler.replica_server is None:
+                    master_replid = handler.generate_random_string(40)
+                    master_repl_offset = "0"
+                    payload = f"role:master\nmaster_replid:{master_replid}\nmaster_repl_offset:{master_repl_offset}"
+                    response = handler.as_bulk_string(payload)
+                    return response
+                else:
+                    return "+role:slave\r\n"
+            else:
+                return "-ERR unknown INFO section\r\n"
+
+    class EchoCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            return f"+{command[1]}\r\n"
+
+    class SetCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            handler.memory[command[1]] = command[2]
+            if(len(command) > 4 and command[3].upper() == "PX" and command[4].isnumeric()):
+                expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
+                handler.expiration[command[1]] = time.time() + expiration_duration
+            else:
+                handler.expiration[command[1]] = None
+            handler.server.numacks = 0  
+            for writer in handler.server.writers:
+                print(f"writing CMD {command} to writer: {writer.get_extra_info('peername')}")
+                handler.write(handler.encode_redis_protocol(command))
+                await writer.drain()
+            return "+OK\r\n"
+
+    class GetCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            if handler.expiration.get(command[1], None) and handler.expiration[command[1]] < time.time():
+                handler.memory.pop(command[1], None)
+                handler.expiration.pop(command[1], None)
+                return "$-1\r\n"
+            else:
+                value = handler.memory.get(command[1], None)
+                if value:
+                    return f"${len(value)}\r\n{value}\r\n"
+                else:
+                    return "$-1\r\n"
+                
+    class XAddCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            stream_key = command[1]
+            stream_id = command[2]
+            stream_id = self.generate_stream_id(stream_key, stream_id)
+            err_message = self.validate_stream_id(stream_key, stream_id)
+            if err_message:
+                return err_message
+            if stream_key not in self.server.streamstore:
+                self.server.streamstore[stream_key] = {}
+            stream_id_parts = stream_id.split("-")
+            entry_number = int(stream_id_parts[0])
+            sequence_number = int(stream_id_parts[1])
+            if entry_number not in self.server.streamstore[stream_key]:
+                self.server.streamstore[stream_key][entry_number] = {}
+
+            self.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
+            return f"${len(stream_id)}\r\n{stream_id}\r\n"
+        
+    
+    class XReadCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            stream_keys, stream_ids = None, None
+            if command[1].lower() == "block":
+                stream_keys, stream_ids = await self._block_read(int(command[2]), command)        
+                
+            if not stream_keys or not stream_ids:
+                stream_keys, stream_ids = self._get_stream_keys_and_ids(command)
+            
+            ret_string = f"*{len(stream_keys)}\r\n"
+            for stream_key, stream_id in zip(stream_keys, stream_ids):
+                ret_string += self.get_one_xread_response(stream_key, stream_id)
+            return ret_string
+        
+    class XRangeCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            stream_key = command[1]
+            lower, upper = command[2], command[3]
+            if lower == "-":
+                lower = "0-0"
+
+            none_string = "+none\r\n"
+            if stream_key not in self.server.streamstore:
+                print(f"Stream key '{stream_key}' not found in streamstore")
+                return none_string
+
+            streamstore = self.server.streamstore[stream_key]
+
+            keys = list(streamstore.keys())
+            
+            if upper == "+":
+                upper = f"{keys[-1]}-{list(streamstore[keys[-1]].keys())[-1]}"
+            
+            lower_outer, lower_inner = int(lower.split("-")[0]), int(lower.split("-")[1])
+            upper_outer, upper_inner = int(upper.split("-")[0]), int(upper.split("-")[1])
+            
+            start_index, end_index = self.find_outer_indices(keys, lower_outer, upper_outer)
+            print(f"Start index: {start_index}, End index: {end_index}")
+            if start_index == -1 or end_index == -1 or start_index >= len(keys) or end_index < 0 or start_index > end_index:
+                print("Invalid range indices")
+                return none_string
+            
+            streamstore_start_index = self.find_inner_start_index(streamstore, keys, start_index, lower_outer, lower_inner)
+            streamstore_end_index = self.find_inner_end_index(streamstore, keys, end_index, upper_outer, upper_inner)
+            print(f"Streamstore start index: {streamstore_start_index}, Streamstore end index: {streamstore_end_index}")
+            if streamstore_start_index == -1 or streamstore_end_index == -1:
+                print("Invalid inner indices")
+                return none_string
+
+            elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
+            ret_string = f"*{len(elements)}\r\n"
+            for key, value in elements.items():
+                ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}"
+            print(f"Ret string: {ret_string}")
+            return ret_string
+
+    class UnknownCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            return "-ERR unknown command\r\n"
     
     
     def validate_stream_id(self, stream_key: str, stream_id: str) -> string:
@@ -161,23 +355,7 @@ class AsyncRequestHandler:
             return 1 if timestamp == 0 else 0
     
 
-    async def handle_xadd(self, command: List[str]) -> str:
-        stream_key = command[1]
-        stream_id = command[2]
-        stream_id = self.generate_stream_id(stream_key, stream_id)
-        err_message = self.validate_stream_id(stream_key, stream_id)
-        if err_message:
-            return err_message
-        if stream_key not in self.server.streamstore:
-            self.server.streamstore[stream_key] = {}
-        stream_id_parts = stream_id.split("-")
-        entry_number = int(stream_id_parts[0])
-        sequence_number = int(stream_id_parts[1])
-        if entry_number not in self.server.streamstore[stream_key]:
-            self.server.streamstore[stream_key][entry_number] = {}
 
-        self.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
-        return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
     async def _block_read(self, block_time: int, command: List[str]) -> Tuple[List[str], List[str]]:
         stream_keys, stream_ids = self._get_stream_keys_and_ids(command)
@@ -207,20 +385,7 @@ class AsyncRequestHandler:
             stream_ids = [x for x in command[start_index:] if re.match(r'\d+-\d+', x)]
         
         return stream_keys, stream_ids
-    
-    async def handle_xread(self, command: List[str]) -> str:
-        start_index = 2
-        stream_keys, stream_ids = None, None
-        if command[1].lower() == "block":
-            stream_keys, stream_ids = await self._block_read(int(command[2]), command)        
-            
-        stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
-        stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
-        
-        ret_string = f"*{len(stream_keys)}\r\n"
-        for stream_key, stream_id in zip(stream_keys, stream_ids):
-            ret_string += self.get_one_xread_response(stream_key, stream_id)
-        return ret_string
+
     
     def get_last_stream_id(self, stream_key: str) -> str:
         if stream_key in self.server.streamstore:
@@ -274,46 +439,7 @@ class AsyncRequestHandler:
         print(f"Ret string: {ret_string}")
         return ret_string
     
-    async def handle_xrange(self, command: List[str]) -> str:
-        stream_key = command[1]
-        lower, upper = command[2], command[3]
-        if lower == "-":
-            lower = "0-0"
 
-        none_string = "+none\r\n"
-        if stream_key not in self.server.streamstore:
-            print(f"Stream key '{stream_key}' not found in streamstore")
-            return none_string
-
-        streamstore = self.server.streamstore[stream_key]
-
-        keys = list(streamstore.keys())
-        
-        if upper == "+":
-            upper = f"{keys[-1]}-{list(streamstore[keys[-1]].keys())[-1]}"
-        
-        lower_outer, lower_inner = int(lower.split("-")[0]), int(lower.split("-")[1])
-        upper_outer, upper_inner = int(upper.split("-")[0]), int(upper.split("-")[1])
-        
-        start_index, end_index = self.find_outer_indices(keys, lower_outer, upper_outer)
-        print(f"Start index: {start_index}, End index: {end_index}")
-        if start_index == -1 or end_index == -1 or start_index >= len(keys) or end_index < 0 or start_index > end_index:
-            print("Invalid range indices")
-            return none_string
-        
-        streamstore_start_index = self.find_inner_start_index(streamstore, keys, start_index, lower_outer, lower_inner)
-        streamstore_end_index = self.find_inner_end_index(streamstore, keys, end_index, upper_outer, upper_inner)
-        print(f"Streamstore start index: {streamstore_start_index}, Streamstore end index: {streamstore_end_index}")
-        if streamstore_start_index == -1 or streamstore_end_index == -1:
-            print("Invalid inner indices")
-            return none_string
-
-        elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
-        ret_string = f"*{len(elements)}\r\n"
-        for key, value in elements.items():
-            ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}"
-        print(f"Ret string: {ret_string}")
-        return ret_string
     
     def generate_redis_array(self, string: str, lst: List[str]) -> str:
         redis_array = []
@@ -374,117 +500,7 @@ class AsyncRequestHandler:
                 ret_dict[f"{current_key}-{streamstore_keys[j]}"] = current_elements[streamstore_keys[j]]  
         return ret_dict
     
-    async def handle_type(self, command: List[str]) -> str:
-        key = command[1]
-        if key in self.memory and (not self.expiration.get(key) or self.expiration[key] >= time.time()):
-            return "+string\r\n"
-        elif key in self.server.streamstore:
-            return "+stream\r\n"
-        else:
-            return "+none\r\n"
 
-    async def handle_config_get(self, command: List[str]) -> str:
-        if len(command) > 1:
-            config_params = command[2:]
-            response = []
-            for param in config_params:
-                response.append(param)
-                if param in self.server.config:
-                    value = self.server.config[param]
-                    response.append(value)
-                else:
-                    response.append("(nil)")
-            return self.server.as_array(response)
-
-    async def handle_wait(self, command: List[str]) -> str:
-        max_wait_ms = int(command[2])
-        num_replicas = int(command[1])
-        
-        
-        for writer in self.server.writers:
-            writer.write(b"*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n")
-            await writer.drain()
-        
-        start_time = time.time()
-        while self.server.numacks < num_replicas and (time.time() - start_time) < (max_wait_ms / 1000):
-            print(f"NUMACKS: {self.server.numacks} num_replicas: {num_replicas} max_wait_ms: {max_wait_ms} time: {time.time()} start_time: {start_time}")
-            await asyncio.sleep(0.1)
-        print("SENDING BACK", self.server.numacks)
-        return f":{self.server.numacks}\r\n"
-
-    async def handle_ping(self) -> str:
-        return "+PONG\r\n"
-
-    async def handle_replconf(self, command: List[str], writer: asyncio.StreamWriter) -> str:
-        if len(command) > 2 and command[1] == "listening-port":
-            self.server.writers.append(writer)
-        elif len(command) > 2 and command[1] == "GETACK":
-            response = f"*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n${len(str(self.offset))}\r\n{self.offset}\r\n"
-            print(f"REPLCONF ACK: {response}")
-            return response
-        elif len(command) > 2 and command[1] == "ACK":
-            print("Incrementing num acks")
-            self.server.numacks += 1
-            return ""
-        return "+OK\r\n"
-
-    async def handle_psync(self, command: List[str]) -> str:
-        response = "+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"
-        rdb_hex = "524544495330303131fa0972656469732d76657205372e322e30fa0a72656469732d62697473c040fa056374696d65c26d08bc65fa08757365642d6d656dc2b0c41000fa08616f662d62617365c000fff06e3bfec0ff5aa2"
-        binary_data = bytes.fromhex(rdb_hex)
-        header = f"${len(binary_data)}\r\n"
-        self.writer.write(response.encode())
-        self.writer.write(header.encode())
-        self.writer.write(binary_data)
-        await self.writer.drain()
-        self.server.numacks += 1
-        return ""
-
-    async def handle_info(self, command: List[str]) -> str:
-        if command[1].lower() == "replication":
-            if self.replica_server is None:
-                master_replid = self.generate_random_string(40)
-                master_repl_offset = "0"
-                payload = f"role:master\nmaster_replid:{master_replid}\nmaster_repl_offset:{master_repl_offset}"
-                response = self.as_bulk_string(payload)
-                return response
-            else:
-                return "+role:slave\r\n"
-        else:
-            return "-ERR unknown INFO section\r\n"
-
-    async def handle_echo(self, command: List[str]) -> str:
-        return f"+{command[1]}\r\n"
-
-    async def handle_set(self, command: List[str]) -> str:
-        self.memory[command[1]] = command[2]
-        if(len(command) > 4 and command[3].upper() == "PX" and command[4].isnumeric()):
-            expiration_duration = int(command[4]) / 1000  # Convert milliseconds to seconds
-            self.expiration[command[1]] = time.time() + expiration_duration
-        else:
-            self.expiration[command[1]] = None
-        self.server.numacks = 0  
-        for writer in self.server.writers:
-            print(f"writing CMD {command} to writer: {writer.get_extra_info('peername')}")
-            writer.write(self.encode_redis_protocol(command))
-            await writer.drain()
-        return "+OK\r\n"
-        #return None
-
-    async def handle_get(self, command: List[str]) -> str:
-        if self.expiration.get(command[1], None) and self.expiration[command[1]] < time.time():
-            self.memory.pop(command[1], None)
-            self.expiration.pop(command[1], None)
-            return "$-1\r\n"
-        else:
-            value = self.memory.get(command[1], None)
-            if value:
-                return f"${len(value)}\r\n{value}\r\n"
-            else:
-                return "$-1\r\n"
-
-    async def handle_unknown(self) -> str:
-        return "-ERR unknown command\r\n"
 
     def as_bulk_string(self, payload: str) -> str:
         return f"${len(payload)}\r\n{payload}\r\n"
