@@ -415,17 +415,19 @@ class AsyncRequestHandler:
         print(f"streamstore: {streamstore}, keys: {keys}, start_index: {start_index}, end_index: {end_index}, streamstore_start_index: {streamstore_start_index}, streamstore_end_index: {streamstore_end_index}")
         if start_index == end_index:
             current_key = keys[start_index]
+            streamstore_keys = list(streamstore[current_key].keys())
             current_elements = streamstore[current_key]
             for i in range(streamstore_start_index, streamstore_end_index + 1):
-                ret_dict[f"{current_key}-{i}"] = current_elements[i]
+                ret_dict[f"{current_key}-{streamstore_keys[i]}"] = current_elements[i]
         else:
             for i in range(start_index, end_index + 1):
                 current_key = keys[i]
+                streamstore_keys = list(streamstore[current_key].keys())
                 current_elements = streamstore[current_key]
                 for j in range(len(current_elements)):
                     if (i == start_index and j < streamstore_start_index) or (i == end_index and j > streamstore_end_index):
                         continue
-                ret_dict[f"{current_key}-{j}"] = current_elements[j]  
+                ret_dict[f"{current_key}-{streamstore_keys[j]}"] = current_elements[j]  
         return ret_dict
     
     async def handle_type(self, command: List[str]) -> str:
