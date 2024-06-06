@@ -340,13 +340,20 @@ class AsyncRequestHandler:
     async def handle_xrange(self, command: List[str]) -> str:
         stream_key = command[1]
         lower, upper = command[2], command[3]
+        if lower == "-":
+            lower = "0-0"
+
         none_string = "+none\r\n"
         if stream_key not in self.server.streamstore:
             print(f"Stream key '{stream_key}' not found in streamstore")
             return none_string
 
         streamstore = self.server.streamstore[stream_key]
+
         keys = list(streamstore.keys())
+        
+        if upper == "+":
+            upper = f"{keys[-1]}-{list(streamstore[keys[-1]].keys())[-1]}"
         
         lower_outer, lower_inner = int(lower.split("-")[0]), int(lower.split("-")[1])
         upper_outer, upper_inner = int(upper.split("-")[0]), int(upper.split("-")[1])
