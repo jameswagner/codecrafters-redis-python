@@ -367,7 +367,7 @@ class AsyncRequestHandler:
         elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
         ret_string = f"*{len(elements)}\r\n"
         for key, value in elements.items():
-            ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}\r\n"
+            ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}"
         print(f"Ret string: {ret_string}")
         return ret_string
     
