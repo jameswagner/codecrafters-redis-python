@@ -4,6 +4,8 @@ from pathlib import Path
 import time
 from typing import Any, BinaryIO, List, Dict, Tuple
 
+from app.AsyncHandler import AsyncRequestHandler
+
 
 class AsyncServer:
     def __init__(self, host: str = "127.0.0.1", port: int = 6379, replica_server: str = None, replica_port: int = None, dir: str = '', dbfilename: str = ''):

@@ -2,14 +2,18 @@ import asyncio
 import logging
 import re
 import time
-from typing import Any, List, Dict, Tuple
+from typing import List, Dict, Tuple
 import random
 import string
 import bisect
-from .AsyncServer import AsyncServer
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .AsyncServer import AsyncServer
 
 class AsyncRequestHandler:
-    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, server: AsyncServer):
+    def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, server: 'AsyncServer'):
         self.reader = reader
         self.writer = writer
         self.server = server
