@@ -345,8 +345,21 @@ class AsyncRequestHandler:
         start_index = 2
         if command[1].lower() == "block":
             block_time = int(command[2])
-            await asyncio.sleep(block_time / 1000)
             start_index += 2
+            if block_time > 0:
+                await asyncio.sleep(block_time / 1000)
+            else:
+                found = False
+                while not found:
+                    stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
+                    stream_ids = [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
+                    for stream_key, stream_id in zip(stream_keys, stream_ids):
+                        response = self.get_one_xread_response(stream_key, stream_id)
+                        if response != "$1-1\r\n":
+                            found = True
+                            break
+                    await asyncio.sleep(0.05)
+            
         stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
         stream_ids = [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
         
