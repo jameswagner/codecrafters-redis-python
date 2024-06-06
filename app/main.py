@@ -365,8 +365,11 @@ class AsyncRequestHandler:
             return none_string
 
         elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
-        print(f"Extracted elements: {elements}")
-        return self.server.as_array(elements)
+        ret_string = f"${len(elements)}\r\n"
+        for key, value in elements.items():
+            ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}\r\n"
+        print(f"Ret string: {ret_string}")
+        return ret_string
     
     def generate_redis_array(self, string: str, lst: List[str]) -> str:
         redis_array = []
@@ -407,24 +410,23 @@ class AsyncRequestHandler:
             streamstore_end_index = len(streamstore[keys[end_index]]) - 1
         return streamstore_end_index
 
-    def extract_elements(self, streamstore: Dict[str, List[str]], keys: List[str], start_index: int, end_index: int, streamstore_start_index: int, streamstore_end_index: int) -> List[str]:
-        elements = []
+    def extract_elements(self, streamstore: Dict[str, List[str]], keys: List[str], start_index: int, end_index: int, streamstore_start_index: int, streamstore_end_index: int) -> Dict[str, List[str]]:
+        ret_dict = {}
         print(f"streamstore: {streamstore}, keys: {keys}, start_index: {start_index}, end_index: {end_index}, streamstore_start_index: {streamstore_start_index}, streamstore_end_index: {streamstore_end_index}")
         if start_index == end_index:
             current_key = keys[start_index]
             current_elements = streamstore[current_key]
-            current_elements = dict(list(current_elements.items())[streamstore_start_index:streamstore_end_index+1])
-            elements.extend(current_elements.values())
+            for i in range(streamstore_start_index, streamstore_end_index + 1):
+                ret_dict[f"{current_key}-{i}"] = current_elements[i]
         else:
             for i in range(start_index, end_index + 1):
                 current_key = keys[i]
                 current_elements = streamstore[current_key]
-                if i == start_index:
-                    current_elements = dict(list(current_elements.items())[streamstore_start_index:])
-                elif i == end_index:
-                    current_elements = dict(list(current_elements.items())[:streamstore_end_index+1])
-                elements.extend(current_elements.values())
-        return elements
+                for j in range(len(current_elements)):
+                    if (i == start_index and j < streamstore_start_index) or (i == end_index and j > streamstore_end_index):
+                        continue
+                ret_dict[f"{current_key}-{j}"] = current_elements[j]  
+        return ret_dict
     
     async def handle_type(self, command: List[str]) -> str:
         key = command[1]
