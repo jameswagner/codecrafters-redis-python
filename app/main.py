@@ -342,7 +342,12 @@ class AsyncRequestHandler:
     
     async def handle_xread(self, command: List[str]) -> str:
         
-        stream_keys = command[2:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
+        start_index = 2
+        if command[1].lower() == "block":
+            block_time = int(command[2])
+            await asyncio.sleep(block_time / 1000)
+            start_index += 2
+        stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
         stream_ids = [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
         
         ret_string = f"*{len(stream_keys)}\r\n"
