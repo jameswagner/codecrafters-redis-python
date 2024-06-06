@@ -350,12 +350,12 @@ class AsyncRequestHandler:
                 await asyncio.sleep(block_time / 1000)
                 if command[len(command) - 1] == "$":
                     stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\$', x), command)))]
-                    stream_ids = [list(self.server.streamstore[stream_key].keys())[-1] for stream_key in stream_keys]               
+                    stream_ids = [self.get_last_stream_id(stream_key) for stream_key in stream_keys]               
             else:
                 found = False
                 if command[len(command) - 1] == "$":
                     stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\$', x), command)))]
-                    stream_ids = [list(self.server.streamstore[stream_key].keys())[-1] for stream_key in stream_keys]
+                    stream_ids = [self.get_last_stream_id(stream_key) for stream_key in stream_keys]  
                 while not found:
                     stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
                     stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
@@ -375,6 +375,16 @@ class AsyncRequestHandler:
             ret_string += self.get_one_xread_response(stream_key, stream_id)
         return ret_string
     
+    def get_last_stream_id(self, stream_key: str) -> str:
+        if stream_key in self.server.streamstore:
+            streamstore = self.server.streamstore[stream_key]
+            if streamstore:
+                last_entry_number = int(list(streamstore.keys())[-1])
+                last_entry = streamstore[str(last_entry_number)]
+                last_entry_sequence = int(list(last_entry.keys())[-1])
+                return f"{last_entry_number}-{last_entry_sequence}"
+        return ""
+
     def get_one_xread_response(self, stream_key: str, stream_id: str) -> str:
         stream_id_parts = stream_id.split("-")
 
