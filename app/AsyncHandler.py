@@ -121,31 +121,45 @@ class AsyncRequestHandler:
     
     def generate_stream_id(self, stream_key: str, stream_id: str) -> str:
         parts = stream_id.split("-")
-        if parts[0].isdigit() and parts[1].isdigit():
+
+        if self._is_valid_id(parts):
             return stream_id
-        if parts[0].isdigit() and parts[1] == "*":
-            parts[0] = int(parts[0])
-            if stream_key in self.server.streamstore:
-                last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
-                last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
-                if(last_entry_number < parts[0]):
-                    sequence_number = 0
-                else:
-                    sequence_number = last_entry_sequence + 1
-            else:
-                sequence_number = 1 if parts[0] == 0 else 0
-            return f"{parts[0]}-{sequence_number}"
+
+        if self._is_time_star(parts):
+            return self._generate_time_star_id(stream_key, parts)
+
         if stream_id == "*" or (parts[0] == "*" and parts[1] == "*"):
-            current_time = int(time.time() * 1000)
-            sequence_number = 0 
-            if stream_key in self.server.streamstore:
-                last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
-                last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
-                if(last_entry_number == current_time):
-                    sequence_number = last_entry_sequence + 1
-            stream_id = f"{current_time}-{sequence_number}"
-            return stream_id
+            return self._generate_star_id(stream_key)
+
         return ""
+
+    def _is_valid_id(self, parts: List[str]) -> bool:
+        return len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit()
+
+    def _is_time_star(self, parts: List[str]) -> bool:
+        return len(parts) == 2 and parts[0].isdigit() and parts[1] == "*"
+    
+    def _generate_time_star_id(self, stream_key: str, parts: List[str]) -> str:
+        parts[0] = int(parts[0])
+        sequence_number = self._calculate_sequence_number(stream_key, parts[0])
+        return f"{parts[0]}-{sequence_number}"
+
+    def _generate_star_id(self, stream_key: str) -> str:
+        current_time = int(time.time() * 1000)
+        sequence_number = self._calculate_sequence_number(stream_key, current_time)
+        return f"{current_time}-{sequence_number}"
+
+    def _calculate_sequence_number(self, stream_key: str, timestamp: int) -> int:
+        if stream_key in self.server.streamstore:
+            last_entry_number = list(self.server.streamstore[stream_key].keys())[-1]
+            last_entry_sequence = list(self.server.streamstore[stream_key][last_entry_number].keys())[-1]
+            if last_entry_number < timestamp:
+                return 0
+            else:
+                return last_entry_sequence + 1
+        else:
+            return 1 if timestamp == 0 else 0
+    
 
     async def handle_xadd(self, command: List[str]) -> str:
         stream_key = command[1]
