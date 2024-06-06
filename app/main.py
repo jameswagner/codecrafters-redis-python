@@ -351,7 +351,7 @@ class AsyncRequestHandler:
         return ret_string
     
     def get_one_xread_response(self, stream_key: str, stream_id: str) -> str:
-        stream_id_parts = stream_id[3].split("-")
+        stream_id_parts = stream_id.split("-")
 
         entry_number = int(stream_id_parts[0])
         sequence_number = int(stream_id_parts[1])
