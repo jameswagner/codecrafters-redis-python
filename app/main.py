@@ -381,7 +381,7 @@ class AsyncRequestHandler:
             streamstore = self.server.streamstore[stream_key]
             if streamstore:
                 last_entry_number = int(list(streamstore.keys())[-1])
-                last_entry = streamstore[str(last_entry_number)]
+                last_entry = streamstore[last_entry_number]
                 last_entry_sequence = int(list(last_entry.keys())[-1])
                 return f"{last_entry_number}-{last_entry_sequence}"
         return ""
