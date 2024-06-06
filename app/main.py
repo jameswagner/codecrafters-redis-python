@@ -25,8 +25,7 @@ async def main() -> None:
         # Use replica_server and replica_port as needed
 
     logging.basicConfig(level=logging.INFO)
-    server = await AsyncServer.create(port=args.port, replica_server=replica_server, replica_port=replica_port, dir=args.dir, dbfilename=args.dbfilename)
-    #await server.start()
+    await AsyncServer.create(port=args.port, replica_server=replica_server, replica_port=replica_port, dir=args.dir, dbfilename=args.dbfilename)
 
 if __name__ == "__main__":
     asyncio.run(main())
