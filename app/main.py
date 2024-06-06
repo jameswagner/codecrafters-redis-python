@@ -343,6 +343,7 @@ class AsyncRequestHandler:
     async def handle_xread(self, command: List[str]) -> str:
         
         start_index = 2
+        stream_keys, stream_ids = None, None
         if command[1].lower() == "block":
             block_time = int(command[2])
             start_index += 2
