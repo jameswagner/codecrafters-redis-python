@@ -3,6 +3,7 @@ import asyncio
 import base64
 import logging
 from pathlib import Path
+import re
 import time
 from typing import Any, BinaryIO, List, Dict, Tuple
 import random
@@ -340,8 +341,18 @@ class AsyncRequestHandler:
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
     async def handle_xread(self, command: List[str]) -> str:
-        stream_key = command[2]
-        stream_id_parts = command[3].split("-")
+        
+        stream_keys = command[2:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
+        stream_ids = [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
+        
+        ret_string = f"*{len(stream_keys)}\r\n"
+        for stream_key, stream_id in zip(stream_keys, stream_ids):
+            ret_string += self.get_one_xread_response(stream_key, stream_id)
+        return ret_string
+    
+    def get_one_xread_response(self, stream_key: str, stream_id: str) -> str:
+        stream_id_parts = stream_id[3].split("-")
+
         entry_number = int(stream_id_parts[0])
         sequence_number = int(stream_id_parts[1])
         none_string = "+none\r\n"
