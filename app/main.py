@@ -360,7 +360,7 @@ class AsyncRequestHandler:
 
         entry_number = int(stream_id_parts[0])
         sequence_number = int(stream_id_parts[1])
-        none_string = "+none\r\n"
+        none_string = "$-1\r\n"
         
         if stream_key not in self.server.streamstore:
             return none_string
