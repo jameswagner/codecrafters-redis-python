@@ -172,10 +172,11 @@ class AsyncRequestHandler:
         else:
             found = False
             while not found:
-                response = self.get_one_xread_response(stream_keys, stream_ids)
-                if response != "$-1\r\n":
-                    found = True
-                    break
+                for stream_key, stream_id in zip(stream_keys, stream_ids):
+                    response = self.get_one_xread_response(stream_keys, stream_ids)
+                    if response != "$-1\r\n":
+                        found = True
+                        break
                 await asyncio.sleep(0.05)
         return stream_keys, stream_ids
     
