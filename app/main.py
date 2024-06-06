@@ -358,8 +358,8 @@ class AsyncRequestHandler:
                     print(f"Stream keys: {stream_keys}")
                     stream_ids = [self.server.streamstore[stream_key][len(self.server.streamstore[stream_key].keys())-1] for stream_key in stream_keys]
                 while not found:
-                    stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
-                    stream_ids = [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
+                    stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
+                    stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
                     for stream_key, stream_id in zip(stream_keys, stream_ids):
                         response = self.get_one_xread_response(stream_key, stream_id)
                         if response != "$-1\r\n":
