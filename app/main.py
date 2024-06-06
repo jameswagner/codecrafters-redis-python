@@ -360,6 +360,7 @@ class AsyncRequestHandler:
                 while not found:
                     stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
                     stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
+                    print(f"Stream keys: {stream_keys}\nStream ids: {stream_ids}")
                     for stream_key, stream_id in zip(stream_keys, stream_ids):
                         response = self.get_one_xread_response(stream_key, stream_id)
                         if response != "$-1\r\n":
