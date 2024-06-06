@@ -365,7 +365,7 @@ class AsyncRequestHandler:
             return none_string
 
         elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
-        ret_string = f"${len(elements)}\r\n"
+        ret_string = f"*{len(elements)}\r\n"
         for key, value in elements.items():
             ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}\r\n"
         print(f"Ret string: {ret_string}")
@@ -479,7 +479,7 @@ class AsyncRequestHandler:
         elif len(command) > 2 and command[1] == "ACK":
             print("Incrementing num acks")
             self.server.numacks += 1
-            return None
+            return ""
         return "+OK\r\n"
 
     async def handle_psync(self, command: List[str]) -> str:
