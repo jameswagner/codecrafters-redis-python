@@ -173,7 +173,7 @@ class AsyncRequestHandler:
             found = False
             while not found:
                 for stream_key, stream_id in zip(stream_keys, stream_ids):
-                    response = self.get_one_xread_response(stream_keys, stream_ids)
+                    response = self.get_one_xread_response(stream_key, stream_id)
                     if response != "$-1\r\n":
                         found = True
                         break
