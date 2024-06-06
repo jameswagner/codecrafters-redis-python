@@ -386,7 +386,7 @@ class AsyncRequestHandler:
             return none_string
 
         elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
-        ret_string = f"*1\r\n*2\r\n${len(stream_key)}\r\n{stream_key}\r\n*{len(elements)}\r\n"
+        ret_string = f"*2\r\n${len(stream_key)}\r\n{stream_key}\r\n*{len(elements)}\r\n"
         for key, value in elements.items():
             ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}"
         print(f"Ret string: {ret_string}")
