@@ -340,8 +340,8 @@ class AsyncRequestHandler:
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
     async def handle_xread(self, command: List[str]) -> str:
-        stream_key = command[1]
-        stream_id_parts = command[2].split("-")
+        stream_key = command[2]
+        stream_id_parts = command[3].split("-")
         entry_number = int(stream_id_parts[0])
         sequence_number = int(stream_id_parts[1])
         none_string = "+none\r\n"
