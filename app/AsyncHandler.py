@@ -6,7 +6,7 @@ from typing import Any, List, Dict, Tuple
 import random
 import string
 import bisect
-from AsyncServer import AsyncServer
+from .AsyncServer import AsyncServer
 
 class AsyncRequestHandler:
     def __init__(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, server: AsyncServer):
