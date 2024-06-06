@@ -355,6 +355,7 @@ class AsyncRequestHandler:
                 found = False
                 if command[len(command) - 1] == "$":
                     stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\$', x), command)))]
+                    print(f"Stream keys: {stream_keys}")
                     stream_ids = [self.get_last_stream_id(stream_key) for stream_key in stream_keys]  
                 while not found:
                     stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
