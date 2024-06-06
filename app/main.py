@@ -348,6 +348,9 @@ class AsyncRequestHandler:
             start_index += 2
             if block_time > 0:
                 await asyncio.sleep(block_time / 1000)
+                if command[len(command) - 1] == "$":
+                    stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
+                    stream_ids = [self.server.streamstore[stream_key][len(self.server.streamstore[stream_key]-1)] for stream_key in stream_keys]               
             else:
                 found = False
                 while not found:
@@ -360,8 +363,8 @@ class AsyncRequestHandler:
                             break
                     await asyncio.sleep(0.05)
             
-        stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
-        stream_ids = [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
+        stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
+        stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
         
         ret_string = f"*{len(stream_keys)}\r\n"
         for stream_key, stream_id in zip(stream_keys, stream_ids):
