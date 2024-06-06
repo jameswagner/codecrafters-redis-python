@@ -249,6 +249,8 @@ class AsyncRequestHandler:
                 response = await self.handle_xadd(cmd)
             elif cmd_name == "XRANGE" and len(cmd) > 3:
                 response = await self.handle_xrange(cmd)
+            elif cmd_name == "XREAD" and len(cmd) > 2:
+                response = await self.handle_xread(cmd)
             else:
                 response = await self.handle_unknown()
 
@@ -336,6 +338,48 @@ class AsyncRequestHandler:
 
         self.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
+    
+    async def handle_xread(self, command: List[str]) -> str:
+        stream_key = command[1]
+        stream_id_parts = command[2].split("-")
+        entry_number = int(stream_id_parts[0])
+        sequence_number = int(stream_id_parts[1])
+        none_string = "+none\r\n"
+        
+        if stream_key not in self.server.streamstore:
+            return none_string
+        
+        streamstore = self.server.streamstore[stream_key]
+
+        if entry_number in streamstore and sequence_number in streamstore[entry_number]:
+            sequence_number += 1 # make it exclusive
+        
+        keys = list(streamstore.keys())
+        
+        upper = f"{keys[-1]}-{list(streamstore[keys[-1]].keys())[-1]}"
+        
+        lower_outer, lower_inner = entry_number, sequence_number
+        upper_outer, upper_inner = int(upper.split("-")[0]), int(upper.split("-")[1])
+        
+        start_index, end_index = self.find_outer_indices(keys, lower_outer, upper_outer)
+        print(f"Start index: {start_index}, End index: {end_index}")
+        if start_index == -1 or end_index == -1 or start_index >= len(keys) or end_index < 0 or start_index > end_index:
+            print("Invalid range indices")
+            return none_string
+        
+        streamstore_start_index = self.find_inner_start_index(streamstore, keys, start_index, lower_outer, lower_inner)
+        streamstore_end_index = self.find_inner_end_index(streamstore, keys, end_index, upper_outer, upper_inner)
+        print(f"Streamstore start index: {streamstore_start_index}, Streamstore end index: {streamstore_end_index}")
+        if streamstore_start_index == -1 or streamstore_end_index == -1:
+            print("Invalid inner indices")
+            return none_string
+
+        elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
+        ret_string = f"*1\r\n*2\r\n${len(stream_key)}\r\n{stream_key}\r\n*{len(elements)}\r\n"
+        for key, value in elements.items():
+            ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}"
+        print(f"Ret string: {ret_string}")
+        return ret_string
     
     async def handle_xrange(self, command: List[str]) -> str:
         stream_key = command[1]
