@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import asyncio
 import logging
 import re
@@ -58,7 +59,8 @@ class AsyncRequestHandler:
             elif cmd_name == "CONFIG" and len(cmd) > 1:
                 response = await self.handle_config_get(cmd)
             elif cmd_name == "KEYS":
-                response = await self.handle_keys(cmd)
+                keys_command = self.KeysCommand()
+                response = await keys_command.execute(self, cmd)
             elif cmd_name == "TYPE" and len(cmd) > 1:
                 response = await self.handle_type(cmd)
             elif cmd_name == "XADD" and len(cmd) > 3:
@@ -81,10 +83,18 @@ class AsyncRequestHandler:
                     self.writer.write(response.encode())
                     await self.writer.drain()
                 self.offset += lengths[index]
-                
-    async def handle_keys(self, command: List[str]) -> str:
-        keys = self.server.get_keys_array()
-        return keys
+    
+    
+    class RedisCommand(ABC):
+        @abstractmethod
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            pass
+
+    class KeysCommand(RedisCommand):
+        async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+            keys = handler.server.get_keys_array()
+            return keys
+
     
     
     def validate_stream_id(self, stream_key: str, stream_id: str) -> string:
@@ -155,34 +165,39 @@ class AsyncRequestHandler:
         self.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
         return f"${len(stream_id)}\r\n{stream_id}\r\n"
     
-    async def handle_xread(self, command: List[str]) -> str:
+    async def _block_read(self, block_time: int, command: List[str]) -> Tuple[List[str], List[str]]:
+        stream_keys, stream_ids = self._get_stream_keys_and_ids(command)
+        if block_time > 0:
+            await asyncio.sleep(block_time / 1000)
+        else:
+            found = False
+            while not found:
+                response = self.get_one_xread_response(stream_keys, stream_ids)
+                if response != "$-1\r\n":
+                    found = True
+                    break
+                await asyncio.sleep(0.05)
+        return stream_keys, stream_ids
+    
+    def _get_stream_keys_and_ids(self, command: List[str]) -> Tuple[List[str], List[str]]:
+        stream_keys, stream_ids = None, None
+        start_index = 2
+        if command[1].lower() == "block":
+            start_index += 2
+        if command[len(command) - 1] == "$":
+            stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\$', x), command)))] # Rest of the array except last $ is stream_keys
+            stream_ids = [self.get_last_stream_id(stream_key) for stream_key in stream_keys]
+        else:
+            stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))] # We have stream keys until the first stream id
+            stream_ids = [x for x in command[start_index:] if re.match(r'\d+-\d+', x)]
         
+        return stream_keys, stream_ids
+    
+    async def handle_xread(self, command: List[str]) -> str:
         start_index = 2
         stream_keys, stream_ids = None, None
         if command[1].lower() == "block":
-            block_time = int(command[2])
-            start_index += 2
-            if block_time > 0:
-                await asyncio.sleep(block_time / 1000)
-                if command[len(command) - 1] == "$":
-                    stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\$', x), command)))]
-                    stream_ids = [self.get_last_stream_id(stream_key) for stream_key in stream_keys]               
-            else:
-                found = False
-                if command[len(command) - 1] == "$":
-                    stream_keys = command[start_index:command.index(next(filter(lambda x: re.match(r'\$', x), command)))]
-                    print(f"Stream keys: {stream_keys}")
-                    stream_ids = [self.get_last_stream_id(stream_key) for stream_key in stream_keys]  
-                while not found:
-                    stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
-                    stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
-                    print(f"Stream keys: {stream_keys}\nStream ids: {stream_ids}")
-                    for stream_key, stream_id in zip(stream_keys, stream_ids):
-                        response = self.get_one_xread_response(stream_key, stream_id)
-                        if response != "$-1\r\n":
-                            found = True
-                            break
-                    await asyncio.sleep(0.05)
+            stream_keys, stream_ids = await self._block_read(int(command[2]), command)        
             
         stream_keys = stream_keys or command[start_index:command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command)))]
         stream_ids = stream_ids or [x for x in command[command.index(next(filter(lambda x: re.match(r'\d+-\d+', x), command))):] if re.match(r'\d+-\d+', x)]
