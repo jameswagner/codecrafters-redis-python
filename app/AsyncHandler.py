@@ -1,16 +1,11 @@
-
 import asyncio
 import logging
 
-from typing import List
-import random
-import string
 
 from typing import TYPE_CHECKING
 
 import app.commands.commands as commands
-from app.utils.encoding_utils import parse_redis_protocol
-
+import app.utils.encoding_utils as encoding_utils
 if TYPE_CHECKING:
     from .AsyncServer import AsyncServer
 
@@ -50,7 +45,7 @@ class AsyncRequestHandler:
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
-        command_list, lengths = parse_redis_protocol(request)
+        command_list, lengths = encoding_utils.parse_redis_protocol(request)
         
         if not command_list:
             logging.info("Received invalid data")
