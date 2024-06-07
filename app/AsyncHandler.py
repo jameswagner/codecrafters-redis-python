@@ -33,12 +33,12 @@ class AsyncRequestHandler:
             await self.handle_request(request)
 
     async def handle_request(self, request: bytes) -> None:
-        commands, lengths = self.parse_redis_protocol(request)
-        if not commands:
+        command_list, lengths = self.parse_redis_protocol(request)
+        if not command_list:
             logging.info("Received invalid data")
             return
 
-        for index, cmd in enumerate(commands):
+        for index, cmd in enumerate(command_list):
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
             if cmd_name == "PING":
                 response = await commands.PingCommand().execute(self, cmd)
