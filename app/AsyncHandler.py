@@ -193,7 +193,7 @@ class AsyncRequestHandler:
             handler.server.numacks = 0  
             for writer in handler.server.writers:
                 print(f"writing CMD {command} to writer: {writer.get_extra_info('peername')}")
-                handler.write(handler.encode_redis_protocol(command))
+                writer.write(handler.encode_redis_protocol(command))
                 await writer.drain()
             return "+OK\r\n"
 
