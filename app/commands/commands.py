@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 import asyncio
 import time
 from typing import List
-from app.AsyncHandler import AsyncRequestHandler
 import app.utils.stream_utils as stream_utils
 
 from typing import TYPE_CHECKING
