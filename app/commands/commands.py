@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import time
 from typing import List
-from app.utils.encoding_utils import encode_redis_protocol
+import app.utils.encoding_utils as encoding_utils
 import app.utils.stream_utils as stream_utils
 
 from typing import TYPE_CHECKING
@@ -95,10 +95,10 @@ class InfoCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
         if command[1].lower() == "replication":
             if handler.replica_server is None:
-                master_replid = handler.generate_random_string(40)
+                master_replid = encoding_utils.generate_random_string(40)
                 master_repl_offset = "0"
                 payload = f"role:master\nmaster_replid:{master_replid}\nmaster_repl_offset:{master_repl_offset}"
-                response = handler.as_bulk_string(payload)
+                response = encoding_utils.as_bulk_string(payload)
                 return response
             else:
                 return "+role:slave\r\n"
@@ -120,7 +120,7 @@ class SetCommand(RedisCommand):
         handler.server.numacks = 0  
         for writer in handler.server.writers:
             print(f"writing CMD {command} to writer: {writer.get_extra_info('peername')}")
-            writer.write(encode_redis_protocol(command))
+            writer.write(encoding_utils.encode_redis_protocol(command))
             await writer.drain()
         return "+OK\r\n"
 
