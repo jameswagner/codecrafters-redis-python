@@ -139,8 +139,8 @@ class XAddCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
         stream_key = command[1]
         stream_id = command[2]
-        stream_id = stream_utils.generate_stream_id(stream_key, stream_id)
-        err_message = stream_utils.validate_stream_id(stream_key, stream_id)
+        stream_id = stream_utils.generate_stream_id(stream_key, stream_id, handler.server)
+        err_message = stream_utils.validate_stream_id(stream_key, stream_id, handler.server)
         if err_message:
             return err_message
         if stream_key not in handler.server.streamstore:
