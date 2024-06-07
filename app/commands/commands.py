@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import time
 from typing import List
+from app.utils.encoding_utils import encode_redis_protocol
 import app.utils.stream_utils as stream_utils
 
 from typing import TYPE_CHECKING
@@ -119,7 +120,7 @@ class SetCommand(RedisCommand):
         handler.server.numacks = 0  
         for writer in handler.server.writers:
             print(f"writing CMD {command} to writer: {writer.get_extra_info('peername')}")
-            writer.write(handler.encode_redis_protocol(command))
+            writer.write(encode_redis_protocol(command))
             await writer.drain()
         return "+OK\r\n"
 
