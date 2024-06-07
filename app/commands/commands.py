@@ -63,7 +63,8 @@ class PingCommand(RedisCommand):
         return "+PONG\r\n"
 
 class ReplConfCommand(RedisCommand):
-    async def execute(self, handler: 'AsyncRequestHandler', command: List[str], writer: asyncio.StreamWriter) -> str:
+    async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        writer = handler.writer
         if len(command) > 2 and command[1] == "listening-port":
             handler.server.writers.append(writer)
         elif len(command) > 2 and command[1] == "GETACK":
