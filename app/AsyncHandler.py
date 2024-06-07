@@ -214,19 +214,19 @@ class AsyncRequestHandler:
         async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
             stream_key = command[1]
             stream_id = command[2]
-            stream_id = self.generate_stream_id(stream_key, stream_id)
-            err_message = self.validate_stream_id(stream_key, stream_id)
+            stream_id = handler.generate_stream_id(stream_key, stream_id)
+            err_message = handler.validate_stream_id(stream_key, stream_id)
             if err_message:
                 return err_message
-            if stream_key not in self.server.streamstore:
-                self.server.streamstore[stream_key] = {}
+            if stream_key not in handler.server.streamstore:
+                handler.server.streamstore[stream_key] = {}
             stream_id_parts = stream_id.split("-")
             entry_number = int(stream_id_parts[0])
             sequence_number = int(stream_id_parts[1])
             if entry_number not in self.server.streamstore[stream_key]:
-                self.server.streamstore[stream_key][entry_number] = {}
+                handler.server.streamstore[stream_key][entry_number] = {}
 
-            self.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
+            handler.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
             return f"${len(stream_id)}\r\n{stream_id}\r\n"
         
     
@@ -234,14 +234,14 @@ class AsyncRequestHandler:
         async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
             stream_keys, stream_ids = None, None
             if command[1].lower() == "block":
-                stream_keys, stream_ids = await self._block_read(int(command[2]), command)        
+                stream_keys, stream_ids = await handler._block_read(int(command[2]), command)        
                 
             if not stream_keys or not stream_ids:
-                stream_keys, stream_ids = self._get_stream_keys_and_ids(command)
+                stream_keys, stream_ids = handler._get_stream_keys_and_ids(command)
             
             ret_string = f"*{len(stream_keys)}\r\n"
             for stream_key, stream_id in zip(stream_keys, stream_ids):
-                ret_string += self.get_one_xread_response(stream_key, stream_id)
+                ret_string += handler.get_one_xread_response(stream_key, stream_id)
             return ret_string
         
     class XRangeCommand(RedisCommand):
@@ -252,11 +252,11 @@ class AsyncRequestHandler:
                 lower = "0-0"
 
             none_string = "+none\r\n"
-            if stream_key not in self.server.streamstore:
+            if stream_key not in handler.server.streamstore:
                 print(f"Stream key '{stream_key}' not found in streamstore")
                 return none_string
 
-            streamstore = self.server.streamstore[stream_key]
+            streamstore = handler.server.streamstore[stream_key]
 
             keys = list(streamstore.keys())
             
@@ -266,23 +266,23 @@ class AsyncRequestHandler:
             lower_outer, lower_inner = int(lower.split("-")[0]), int(lower.split("-")[1])
             upper_outer, upper_inner = int(upper.split("-")[0]), int(upper.split("-")[1])
             
-            start_index, end_index = self.find_outer_indices(keys, lower_outer, upper_outer)
+            start_index, end_index = handler.find_outer_indices(keys, lower_outer, upper_outer)
             print(f"Start index: {start_index}, End index: {end_index}")
             if start_index == -1 or end_index == -1 or start_index >= len(keys) or end_index < 0 or start_index > end_index:
                 print("Invalid range indices")
                 return none_string
             
-            streamstore_start_index = self.find_inner_start_index(streamstore, keys, start_index, lower_outer, lower_inner)
-            streamstore_end_index = self.find_inner_end_index(streamstore, keys, end_index, upper_outer, upper_inner)
+            streamstore_start_index = handler.find_inner_start_index(streamstore, keys, start_index, lower_outer, lower_inner)
+            streamstore_end_index = handler.find_inner_end_index(streamstore, keys, end_index, upper_outer, upper_inner)
             print(f"Streamstore start index: {streamstore_start_index}, Streamstore end index: {streamstore_end_index}")
             if streamstore_start_index == -1 or streamstore_end_index == -1:
                 print("Invalid inner indices")
                 return none_string
 
-            elements = self.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
+            elements = handler.extract_elements(streamstore, keys, start_index, end_index, streamstore_start_index, streamstore_end_index)
             ret_string = f"*{len(elements)}\r\n"
             for key, value in elements.items():
-                ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{self.server.as_array(value)}"
+                ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{handler.server.as_array(value)}"
             print(f"Ret string: {ret_string}")
             return ret_string
 
