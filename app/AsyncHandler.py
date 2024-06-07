@@ -9,6 +9,7 @@ import string
 from typing import TYPE_CHECKING
 
 import app.commands.commands as commands
+from app.utils.encoding_utils import parse_redis_protocol
 
 if TYPE_CHECKING:
     from .AsyncServer import AsyncServer
@@ -23,23 +24,7 @@ class AsyncRequestHandler:
         self.replica_server = server.replica_server
         self.replica_port = server.replica_port
         self.offset = 0
-
-    async def process_request(self) -> None:
-        while True:
-            request = await self.reader.read(1024)
-            if not request:
-                break
-            logging.info(f"Request: {request}")
-            await self.handle_request(request)
-
-    async def handle_request(self, request: bytes) -> None:
-        command_list, lengths = self.parse_redis_protocol(request)
-        
-        if not command_list:
-            logging.info("Received invalid data")
-            return
-
-        command_map = {
+        self.command_map = {
             "PING": commands.PingCommand(),
             "ECHO": commands.EchoCommand(),
             "SET": commands.SetCommand(),
@@ -56,11 +41,26 @@ class AsyncRequestHandler:
             "XREAD": commands.XReadCommand(),
         }
 
+    async def process_request(self) -> None:
+        while True:
+            request = await self.reader.read(1024)
+            if not request:
+                break
+            logging.info(f"Request: {request}")
+            await self.handle_request(request)
+
+    async def handle_request(self, request: bytes) -> None:
+        command_list, lengths = parse_redis_protocol(request)
+        
+        if not command_list:
+            logging.info("Received invalid data")
+            return
+
         for index, cmd in enumerate(command_list):
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
-            command_class = command_map.get(cmd_name, commands.UnknownCommand())
+            command_class = self.command_map.get(cmd_name, commands.UnknownCommand())
 
-            if cmd_name in command_map:
+            if cmd_name in self.command_map:
                 response = await command_class.execute(self, cmd)
             else:
                 response = await commands.UnknownCommand.execute(self, cmd)
@@ -76,4 +76,3 @@ class AsyncRequestHandler:
                     self.writer.write(response.encode())
                     await self.writer.drain()
                 self.offset += lengths[index]
-        
