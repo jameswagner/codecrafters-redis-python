@@ -97,7 +97,7 @@ class AsyncRequestHandler:
     class TypeCommand(RedisCommand):
         async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
             key = command[1]
-            if key in self.memory and (not self.expiration.get(key) or self.expiration[key] >= time.time()):
+            if key in handler.memory and (not handler.expiration.get(key) or handler.expiration[key] >= time.time()):
                 return "+string\r\n"
             elif key in self.server.streamstore:
                 return "+stream\r\n"
