@@ -223,7 +223,7 @@ class AsyncRequestHandler:
             stream_id_parts = stream_id.split("-")
             entry_number = int(stream_id_parts[0])
             sequence_number = int(stream_id_parts[1])
-            if entry_number not in handler.streamstore[stream_key]:
+            if entry_number not in handler.server.streamstore[stream_key]:
                 handler.server.streamstore[stream_key][entry_number] = {}
 
             handler.server.streamstore[stream_key][entry_number][sequence_number] = command[3:]
