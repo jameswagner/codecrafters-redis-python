@@ -111,8 +111,8 @@ class AsyncRequestHandler:
                 response = []
                 for param in config_params:
                     response.append(param)
-                    if param in self.server.config:
-                        value = self.server.config[param]
+                    if param in handler.server.config:
+                        value = handler.server.config[param]
                         response.append(value)
                     else:
                         response.append("(nil)")
