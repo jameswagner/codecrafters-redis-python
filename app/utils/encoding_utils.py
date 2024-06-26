@@ -10,11 +10,13 @@ from app.utils.constants import NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 
 def generate_redis_array(string: str, lst: List[str]) -> str:
     redis_array = []
-    redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
-    redis_array.append(f"*{len(lst)}\r\n")
-    for element in lst:
-        redis_array.append(f"${len(element)}\r\n{element}\r\n")
-    return ''.join(redis_array)
+    if string:
+        redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
+    if lst:
+        redis_array.append(f"*{len(lst)}\r\n")
+        for element in lst:
+            redis_array.append(f"${len(element)}\r\n{element}\r\n")
+        return ''.join(redis_array)
 
 def as_bulk_string(payload: str) -> str:
     return f"${len(payload)}\r\n{payload}\r\n"

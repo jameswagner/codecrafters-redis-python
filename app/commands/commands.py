@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import time
 from typing import List
-from app.utils.constants import NON_INT_ERROR, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
+from app.utils.constants import EXEC_WITHOUT_MULTI, NON_INT_ERROR, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 import app.utils.encoding_utils as encoding_utils
 import app.utils.stream_utils as stream_utils
 
@@ -244,13 +244,15 @@ class MultiCommand(RedisCommand):
 
 class ExecCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
-        response = ""
+        if handler.command_queue.empty():
+            return EXEC_WITHOUT_MULTI
+        responses = []
         while not handler.command_queue.empty():
             command = handler.command_queue.get()
             command_name = command[0].upper()
             command = handler.command_map.get(command_name, UnknownCommand())
-            response += await command.execute(handler, command)
-        return response
+            responses.push(await command.execute(handler, command))
+        return encoding_utils.generate_redis_array(lst=responses)
 
 class UnknownCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
