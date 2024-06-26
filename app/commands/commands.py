@@ -239,12 +239,14 @@ class IncrCommand(RedisCommand):
 
 class MultiCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        if not handler.command_queue:
+            handler.command_queue = asyncio.Queue()
         handler.command_queue.put(command)
         return "+OK\r\n"
 
 class ExecCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
-        if handler.command_queue.empty():
+        if not handler.command_queue:
             return EXEC_WITHOUT_MULTI
         responses = []
         while not handler.command_queue.empty():
@@ -252,6 +254,7 @@ class ExecCommand(RedisCommand):
             command_name = command[0].upper()
             command = handler.command_map.get(command_name, UnknownCommand())
             responses.push(await command.execute(handler, command))
+        handler.command_queue = None
         return encoding_utils.generate_redis_array(lst=responses)
 
 class UnknownCommand(RedisCommand):
