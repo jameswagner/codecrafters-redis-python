@@ -34,6 +34,8 @@ class AsyncRequestHandler:
             "XADD": commands.XAddCommand(),
             "XRANGE": commands.XRangeCommand(),
             "XREAD": commands.XReadCommand(),
+            "INCR": commands.IncrCommand(),
+            "INCRBY": commands.IncrByCommand(),
         }
 
     async def process_request(self) -> None:

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import time
 from typing import List
+from app.utils.constants import NON_INT_ERROR, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 import app.utils.encoding_utils as encoding_utils
 import app.utils.stream_utils as stream_utils
 
@@ -212,6 +213,28 @@ class XRangeCommand(RedisCommand):
             ret_string += f"*2\r\n${len(key)}\r\n{key}\r\n{handler.server.as_array(value)}"
         print(f"Ret string: {ret_string}")
         return ret_string
+
+class IncrByCommand(RedisCommand):
+    async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        key = command[1]
+        increment = command[2]
+        value = await encoding_utils.get_value(handler, key)
+        if value == WRONG_TYPE_RESPONSE:
+            return WRONG_TYPE_RESPONSE
+        if value == NOT_FOUND_RESPONSE:
+            value = "0"
+        try:
+            increment = int(increment)
+            value = int(value)
+        except ValueError:
+            return NON_INT_ERROR
+        handler.memory[key] = str(int(value) + int(increment))
+        return f":{handler.memory[key]}\r\n"
+        
+class IncrCommand(RedisCommand):
+    async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        incr_by_command = IncrByCommand()
+        return await incr_by_command.execute(handler, ["INCRBY", command[1], "1"])
 
 class UnknownCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:

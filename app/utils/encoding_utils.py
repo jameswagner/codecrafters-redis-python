@@ -1,6 +1,10 @@
 import random
 import string
+import time
 from typing import List
+
+from app.AsyncHandler import AsyncRequestHandler
+from app.utils.constants import NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 
 
 def generate_redis_array(string: str, lst: List[str]) -> str:
@@ -62,3 +66,18 @@ def parse_redis_protocol(data: bytes):
     
 def generate_random_string(length: int) -> str:
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+
+
+async def get_value(handler: 'AsyncRequestHandler', key: str) -> None|str:
+    if handler.expiration.get(key, None) and handler.expiration[key] < time.time():
+        handler.memory.pop(key, None)
+        handler.expiration.pop(key, None)
+        return None
+    else:
+        value = handler.memory.get(key, None)
+        if value is None:
+            return NOT_FOUND_RESPONSE
+        elif not isinstance(value, str):
+            return WRONG_TYPE_RESPONSE
+        else:
+            return value
