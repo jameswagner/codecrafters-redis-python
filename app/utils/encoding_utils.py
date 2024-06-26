@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 from app.utils.constants import EMPTY_ARRAY_RESPONSE, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 
 
-def generate_redis_array(string: str, lst: List[str]) -> str:
+def generate_redis_array(string: str = "", lst: List[str] = None) -> str:
     redis_array = []
     if string:
         redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
