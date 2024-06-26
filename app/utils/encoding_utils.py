@@ -1,9 +1,10 @@
 import random
 import string
 import time
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from app.AsyncHandler import AsyncRequestHandler
+if TYPE_CHECKING:
+    from app.AsyncHandler import AsyncRequestHandler
 from app.utils.constants import NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 
 
