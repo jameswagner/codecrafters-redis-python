@@ -55,6 +55,13 @@ class AsyncRequestHandler:
         if not command_list:
             logging.info("Received invalid data")
             return
+        
+        if self.command_queue is not None:
+            self.command_queue.append((command_list, lengths))
+            response = encoding_utils.generate_redis_array("QUEUED")
+            self.writer.write(response.encode())
+            await self.writer.drain()
+            return
 
         for index, cmd in enumerate(command_list):
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
