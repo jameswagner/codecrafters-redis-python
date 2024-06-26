@@ -19,6 +19,7 @@ class AsyncRequestHandler:
         self.replica_server = server.replica_server
         self.replica_port = server.replica_port
         self.offset = 0
+        self.command_queue = asyncio.Queue()
         self.command_map = {
             "PING": commands.PingCommand(),
             "ECHO": commands.EchoCommand(),

@@ -236,6 +236,22 @@ class IncrCommand(RedisCommand):
         incr_by_command = IncrByCommand()
         return await incr_by_command.execute(handler, ["INCRBY", command[1], "1"])
 
+
+class MultiCommand(RedisCommand):
+    async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        handler.command_queue.put(command)
+        return "+OK\r\n"
+
+class ExecCommand(RedisCommand):
+    async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        response = ""
+        while not handler.command_queue.empty():
+            command = handler.command_queue.get()
+            command_name = command[0].upper()
+            command = handler.command_map.get(command_name, UnknownCommand())
+            response += await command.execute(handler, command)
+        return response
+
 class UnknownCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
         return "-ERR unknown command\r\n"
