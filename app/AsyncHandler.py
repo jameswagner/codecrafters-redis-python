@@ -57,7 +57,7 @@ class AsyncRequestHandler:
             return
         
         if self.command_queue is not None:
-            self.command_queue.append((command_list, lengths))
+            await self.command_queue.put((command_list, lengths))
             response = encoding_utils.generate_redis_array("QUEUED")
             self.writer.write(response.encode())
             await self.writer.drain()
