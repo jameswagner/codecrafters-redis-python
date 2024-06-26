@@ -14,7 +14,7 @@ def generate_redis_array(string: str = "", lst: List[str] = None) -> str:
         redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
     if lst != None:
         if len(lst) == 0:
-            return EMPTY_ARRAY_RESPONSE
+            return "*0\r\n"
         redis_array.append(f"*{len(lst)}\r\n")
         for element in lst:
             redis_array.append(f"${len(element)}\r\n{element}\r\n")
