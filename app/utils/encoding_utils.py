@@ -5,14 +5,16 @@ from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from app.AsyncHandler import AsyncRequestHandler
-from app.utils.constants import NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
+from app.utils.constants import EMPTY_ARRAY_RESPONSE, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 
 
 def generate_redis_array(string: str, lst: List[str]) -> str:
     redis_array = []
     if string:
         redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
-    if lst:
+    if lst != None:
+        if len(lst) == 0:
+            return EMPTY_ARRAY_RESPONSE
         redis_array.append(f"*{len(lst)}\r\n")
         for element in lst:
             redis_array.append(f"${len(element)}\r\n{element}\r\n")
