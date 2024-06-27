@@ -247,8 +247,7 @@ class ExecCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
         if not handler.command_queue:
             return EXEC_WITHOUT_MULTI
-        if handler.command_queue.empty():
-            return "$0\r\n"
+
         responses = []
         while not handler.command_queue.empty():
             command = await handler.command_queue.get()
