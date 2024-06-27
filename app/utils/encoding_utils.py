@@ -1,14 +1,28 @@
 import random
 import string
 import time
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, List
 
 if TYPE_CHECKING:
     from app.AsyncHandler import AsyncRequestHandler
 from app.utils.constants import EMPTY_ARRAY_RESPONSE, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 
 
-def generate_redis_array(string: str = "", lst: List[str] = None) -> str:
+def create_redis_response(response: Any) -> str:
+    if response is None:
+        return EMPTY_ARRAY_RESPONSE
+    elif isinstance(response, str):
+        if response == "OK":
+            return f"+{response}\r\n"
+        elif response.startswith("-ERR" or response.startswith("+ERR")):
+            return f"{response}\r\n"
+        return f"${len(response)}\r\n{response}\r\n"
+    elif isinstance(response, int):
+        return f":{response}\r\n"
+    elif isinstance(response, list):
+        return generate_redis_array(lst=response)
+
+def generate_redis_array(lst: List[str] = None) -> str:
     redis_array = []
     if string:
         redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
