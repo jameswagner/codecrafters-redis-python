@@ -241,7 +241,6 @@ class MultiCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
         if not handler.command_queue:
             handler.command_queue = asyncio.Queue()
-        handler.command_queue.put(command)
         return "+OK\r\n"
 
 class ExecCommand(RedisCommand):
@@ -252,7 +251,7 @@ class ExecCommand(RedisCommand):
             return "$0\r\n"
         responses = []
         while not handler.command_queue.empty():
-            command = handler.command_queue.get()
+            command = await handler.command_queue.get()
             command_name = command[0].upper()
             command = handler.command_map.get(command_name, UnknownCommand())
             responses.push(await command.execute(handler, command))
