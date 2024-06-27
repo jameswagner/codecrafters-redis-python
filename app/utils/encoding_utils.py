@@ -28,11 +28,13 @@ def generate_redis_array(lst: List[str] = None) -> str:
         return "*0\r\n"
     redis_array.append(f"*{len(lst)}\r\n")
     for element in lst:
-        if element.endswith("\r\n"):
-            element = element[:-2]
+        print("ELEMENT: ", element)
         if isinstance(element, list):
             redis_array.append(generate_redis_array(element))
             continue
+        if element.endswith("\r\n"):
+            element = element[:-2]
+
         if element.startswith(":") and element[1:].isdigit():
             redis_array.append(f"{element}\r\n")
             continue
