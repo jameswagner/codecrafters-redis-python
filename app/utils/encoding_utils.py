@@ -24,8 +24,6 @@ def create_redis_response(response: Any) -> str:
 
 def generate_redis_array(lst: List[str] = None) -> str:
     redis_array = []
-    if string:
-        redis_array.append(f"*2\r\n${len(string)}\r\n{string}\r\n")
     if lst != None:
         if len(lst) == 0:
             return "*0\r\n"
