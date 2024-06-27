@@ -28,6 +28,8 @@ def generate_redis_array(lst: List[str] = None) -> str:
         return "*0\r\n"
     redis_array.append(f"*{len(lst)}\r\n")
     for element in lst:
+        if element.endswith("\r\n"):
+            element = element[:-2]
         if isinstance(element, list):
             redis_array.append(generate_redis_array(element))
             continue
@@ -39,8 +41,6 @@ def generate_redis_array(lst: List[str] = None) -> str:
             continue
         if element.startswith("+"):
             element = element[1:]
-        if element.endswith("\r\n"):
-            element = element[:-2]
         redis_array.append(f"${len(element)}\r\n{element}\r\n")
     return ''.join(redis_array)
 
