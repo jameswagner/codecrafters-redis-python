@@ -61,7 +61,7 @@ class AsyncRequestHandler:
             command_class = self.command_map.get(cmd_name, commands.UnknownCommand())
             
             if self.command_queue is not None and cmd_name not in ["MULTI", "EXEC"]:
-                await self.command_queue.put(command_list)
+                await self.command_queue.put(cmd)
                 response = "+QUEUED\r\n"
                 self.writer.write(response.encode())
                 await self.writer.drain()
