@@ -254,7 +254,7 @@ class ExecCommand(RedisCommand):
             print(f"EXECUTING COMMAND: {command}")
             command_name = command[0].upper()
             command = handler.command_map.get(command_name, UnknownCommand())
-            responses.push(await command.execute(handler, command))
+            responses.append(await command.execute(handler, command))
         handler.command_queue = None
         return encoding_utils.generate_redis_array(lst=responses)
 
