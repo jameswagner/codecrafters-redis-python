@@ -55,17 +55,17 @@ class AsyncRequestHandler:
         if not command_list:
             logging.info("Received invalid data")
             return
-        
-        if self.command_queue is not None:
-            await self.command_queue.put((command_list, lengths))
-            response = "+QUEUED\r\n"
-            self.writer.write(response.encode())
-            await self.writer.drain()
-            return
 
         for index, cmd in enumerate(command_list):
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
             command_class = self.command_map.get(cmd_name, commands.UnknownCommand())
+            
+            if self.command_queue is not None and cmd_name not in ["MULTI", "EXEC"]:
+                await self.command_queue.put((command_list, lengths))
+                response = "+QUEUED\r\n"
+                self.writer.write(response.encode())
+                await self.writer.drain()
+                return
 
             if cmd_name in self.command_map:
                 response = await command_class.execute(self, cmd)
