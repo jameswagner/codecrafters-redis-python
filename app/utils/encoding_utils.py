@@ -31,6 +31,12 @@ def generate_redis_array(lst: List[str] = None) -> str:
         if isinstance(element, list):
             redis_array.append(generate_redis_array(element))
             continue
+        if element.startswith(":") and element[1:].isdigit():
+            redis_array.append(f"{element}\r\n")
+            continue
+        if element.isdigit():
+            redis_array.append(f":{element}\r\n")
+            continue
         if element.startswith("+"):
             element = element[1:]
         if element.endswith("\r\n"):
