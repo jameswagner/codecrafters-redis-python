@@ -134,7 +134,7 @@ class GetCommand(RedisCommand):
         else:
             value = handler.memory.get(command[1], None)
             if value:
-                return f"${len(value)}\r\n{value}\r\n"
+                return value
             else:
                 return "$-1\r\n"
             
