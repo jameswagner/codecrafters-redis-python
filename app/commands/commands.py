@@ -229,7 +229,7 @@ class IncrByCommand(RedisCommand):
         except ValueError:
             return NON_INT_ERROR
         handler.memory[key] = str(int(value) + int(increment))
-        return f":{handler.memory[key]}\r\n"
+        return f"{handler.memory[key]}\r\n"
         
 class IncrCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
