@@ -24,13 +24,12 @@ def create_redis_response(response: Any) -> str:
 
 def generate_redis_array(lst: List[str] = None) -> str:
     redis_array = []
-    if lst != None:
-        if len(lst) == 0:
-            return "*0\r\n"
-        redis_array.append(f"*{len(lst)}\r\n")
-        for element in lst:
-            redis_array.append(f"${len(element)}\r\n{element}\r\n")
-        return ''.join(redis_array)
+    if len(lst) == 0:
+        return "*0\r\n"
+    redis_array.append(f"*{len(lst)}\r\n")
+    for element in lst:
+        redis_array.append(f"${len(element)}\r\n{element}\r\n")
+    return ''.join(redis_array)
 
 def as_bulk_string(payload: str) -> str:
     return f"${len(payload)}\r\n{payload}\r\n"
