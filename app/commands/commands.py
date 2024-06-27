@@ -251,6 +251,7 @@ class ExecCommand(RedisCommand):
         responses = []
         while not handler.command_queue.empty():
             command = await handler.command_queue.get()
+            print(f"EXECUTING COMMAND: {command}")
             command_name = command[0].upper()
             command = handler.command_map.get(command_name, UnknownCommand())
             responses.push(await command.execute(handler, command))
