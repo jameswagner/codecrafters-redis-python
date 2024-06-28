@@ -22,6 +22,19 @@ def create_redis_response(response: Any) -> str:
     elif isinstance(response, list):
         return generate_redis_array(lst=response)
 
+def is_bulk_string(data: str) -> bool:
+    # should start with $, end with \r\n. The digits following $ should reflect the length of the string
+    if not data.startswith("$") or not data.endswith("\r\n"):
+        return False
+    
+    index = 1
+    while index < len(data) and data[index].isdigit():
+        index += 1
+    str_len = int(data[1:index])
+    index += 2
+    return len(data[index:-2]) == str_len
+
+
 def generate_redis_array(lst: List[str] = None) -> str:
     redis_array = []
     if len(lst) == 0:
@@ -32,6 +45,9 @@ def generate_redis_array(lst: List[str] = None) -> str:
         if isinstance(element, list):
             redis_array.append(generate_redis_array(element))
             continue
+        if is_bulk_string(element):
+            redis_array.append(element)
+            continue
         if element.endswith("\r\n"):
             element = element[:-2]
 
@@ -40,7 +56,7 @@ def generate_redis_array(lst: List[str] = None) -> str:
             continue
         if element.startswith("+"):
             element = element[1:]
-        redis_array.append(f"${len(element)}\r\n{element}\r\n")
+        redis_array.append(as_bulk_string(element))
     return ''.join(redis_array)
 
 def as_bulk_string(payload: str) -> str:

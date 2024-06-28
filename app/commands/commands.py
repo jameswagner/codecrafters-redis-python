@@ -134,7 +134,7 @@ class GetCommand(RedisCommand):
         else:
             value = handler.memory.get(command[1], None)
             if value:
-                return value
+                return encoding_utils.create_redis_response(value)
             else:
                 return "$-1\r\n"
             
