@@ -34,6 +34,8 @@ def is_bulk_string(data: str) -> bool:
     index += 2
     return len(data[index:-2]) == str_len
 
+def is_error(data: str) -> bool:
+    return data.startswith("-ERR") or data.startswith("+ERR"
 
 def generate_redis_array(lst: List[str] = None) -> str:
     redis_array = []
@@ -45,7 +47,7 @@ def generate_redis_array(lst: List[str] = None) -> str:
         if isinstance(element, list):
             redis_array.append(generate_redis_array(element))
             continue
-        if is_bulk_string(element):
+        if is_bulk_string(element) or is_error(element):
             redis_array.append(element)
             continue
         if element.endswith("\r\n"):
