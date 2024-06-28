@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import time
 from typing import List
-from app.utils.constants import EXEC_WITHOUT_MULTI, NON_INT_ERROR, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
+from app.utils.constants import DISCARD_WITHOUT_MULTI, EXEC_WITHOUT_MULTI, NON_INT_ERROR, NOT_FOUND_RESPONSE, WRONG_TYPE_RESPONSE
 import app.utils.encoding_utils as encoding_utils
 import app.utils.stream_utils as stream_utils
 
@@ -260,6 +260,8 @@ class ExecCommand(RedisCommand):
 
 class DiscardCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        if not handler.command_queue:
+            return DISCARD_WITHOUT_MULTI
         handler.command_queue = None
         return "+OK\r\n"
 
