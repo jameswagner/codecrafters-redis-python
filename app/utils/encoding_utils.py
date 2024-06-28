@@ -35,7 +35,7 @@ def is_bulk_string(data: str) -> bool:
     return len(data[index:-2]) == str_len
 
 def is_error(data: str) -> bool:
-    return data.startswith("-ERR") or data.startswith("+ERR"
+    return data.startswith("-ERR") or data.startswith("+ERR")
 
 def generate_redis_array(lst: List[str] = None) -> str:
     redis_array = []
