@@ -39,6 +39,7 @@ class AsyncRequestHandler:
             "INCRBY": commands.IncrByCommand(),
             "EXEC": commands.ExecCommand(),
             "MULTI": commands.MultiCommand(),
+            "DISCARD": commands.DiscardCommand(),
         }
 
     async def process_request(self) -> None:

@@ -258,6 +258,11 @@ class ExecCommand(RedisCommand):
         handler.command_queue = None
         return encoding_utils.generate_redis_array(lst=responses)
 
+class DiscardCommand(RedisCommand):
+    async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
+        handler.command_queue = None
+        return "+OK\r\n"
+
 class UnknownCommand(RedisCommand):
     async def execute(self, handler: 'AsyncRequestHandler', command: List[str]) -> str:
         return "-ERR unknown command\r\n"
