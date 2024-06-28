@@ -61,7 +61,7 @@ class AsyncRequestHandler:
             cmd_name = cmd[0].upper()  # Command names are case-insensitive
             command_class = self.command_map.get(cmd_name, commands.UnknownCommand())
             
-            if self.command_queue is not None and cmd_name not in ["MULTI", "EXEC"]:
+            if self.command_queue is not None and cmd_name not in ["MULTI", "EXEC", "DISCARD"]:
                 await self.command_queue.put(cmd)
                 response = "+QUEUED\r\n"
                 self.writer.write(response.encode())
